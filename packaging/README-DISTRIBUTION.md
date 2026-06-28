@@ -12,7 +12,7 @@ repositorio.
 ## macOS
 
 - Abrí `Seguidores.app`.
-- El archivo `seguidores` ofrece la interfaz de consola desde Terminal.
+- El archivo `seguidores-cli` ofrece la interfaz de consola desde Terminal.
 - La aplicación tiene una firma ad hoc, no una firma notarizada de Apple. En la primera apertura
   puede ser necesario hacer Control-clic, elegir **Abrir** y confirmar.
 

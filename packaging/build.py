@@ -23,7 +23,7 @@ def main() -> int:
     architecture = _architecture(platform.machine())
     _reset_outputs()
 
-    console_name = "seguidores"
+    console_name = "seguidores-cli" if system == "Darwin" else "seguidores"
     gui_name = "Seguidores" if system == "Darwin" else "seguidores-gui"
     _build_entry(ROOT / "packaging" / "console_entry.py", console_name)
     _build_entry(

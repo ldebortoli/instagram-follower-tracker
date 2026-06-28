@@ -34,8 +34,8 @@ La página de [Releases](https://github.com/ldebortoli/instagram-follower-tracke
 paquetes que no requieren instalar Python:
 
 - `Windows-x86_64`: `seguidores-gui.exe` para doble clic y `seguidores.exe` para consola.
-- `macOS-arm64`: `Seguidores.app` y consola para equipos Apple Silicon.
-- `macOS-x86_64`: `Seguidores.app` y consola para equipos Intel.
+- `macOS-arm64`: `Seguidores.app` y `seguidores-cli` para equipos Apple Silicon.
+- `macOS-x86_64`: `Seguidores.app` y `seguidores-cli` para equipos Intel.
 - `Linux-x86_64`: `seguidores-gui` y `seguidores` dentro de un `.tar.gz`.
 
 Cada archivo incluye un `.sha256` para comprobar su integridad. Windows SmartScreen y macOS
