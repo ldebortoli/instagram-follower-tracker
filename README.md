@@ -28,7 +28,24 @@ El chequeo se instala para el usuario actual, sin requerir que una ventana del p
 abierta. Las notificaciones de escritorio requieren una sesión gráfica iniciada. En Linux, el popup
 usa `notify-send`.
 
-## Requisitos e instalación
+## Aplicaciones autónomas
+
+La página de [Releases](https://github.com/ldebortoli/instagram-follower-tracker/releases) publica
+paquetes que no requieren instalar Python:
+
+- `Windows-x86_64`: `seguidores-gui.exe` para doble clic y `seguidores.exe` para consola.
+- `macOS-arm64`: `Seguidores.app` y consola para equipos Apple Silicon.
+- `macOS-x86_64`: `Seguidores.app` y consola para equipos Intel.
+- `Linux-x86_64`: `seguidores-gui` y `seguidores` dentro de un `.tar.gz`.
+
+Cada archivo incluye un `.sha256` para comprobar su integridad. Windows SmartScreen y macOS
+Gatekeeper pueden advertir durante la primera apertura porque todavía no se usan certificados
+comerciales. La aplicación de macOS recibe una firma ad hoc; las instrucciones exactas están en el
+`LEEME.md` de cada paquete.
+
+También se puede instalar desde el código fuente.
+
+## Requisitos e instalación desde el código
 
 - Python 3.11 o posterior.
 - Git.
@@ -184,6 +201,17 @@ python -m pip install -e ".[dev]"
 ruff check .
 pytest --cov=seguidores
 ```
+
+Para generar el paquete autónomo del sistema actual:
+
+```bash
+python -m pip install -e ".[build-app]"
+python packaging/build.py
+```
+
+PyInstaller no compila para otros sistemas desde uno solo. El workflow `package` construye y prueba
+los cuatro paquetes en runners nativos; al publicar un tag `v*`, los adjunta automáticamente a un
+GitHub Release.
 
 ## Licencia
 

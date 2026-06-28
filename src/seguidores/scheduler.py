@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from seguidores.config import parse_time
+from seguidores.launcher import ScheduledInvocation, scheduled_invocation
 from seguidores.paths import AppPaths
 
 WINDOWS_TASK_NAME = "SeguidoresInstagram"
@@ -33,24 +34,31 @@ class SchedulerStatus:
     detail: str
 
 
-def install(paths: AppPaths, time: str, *, backend: str | None = None) -> str:
+def install(
+    paths: AppPaths,
+    time: str,
+    *,
+    backend: str | None = None,
+    invocation: ScheduledInvocation | None = None,
+) -> str:
     parse_time(time)
     paths.ensure()
+    invocation = invocation or scheduled_invocation()
     selected = backend or default_backend()
     if selected == "windows":
-        _install_windows(paths, time)
+        _install_windows(paths, time, invocation)
     elif selected == "launchd":
-        _install_launchd(paths, time)
+        _install_launchd(paths, time, invocation)
     elif selected == "systemd":
         try:
-            _install_systemd(paths, time)
+            _install_systemd(paths, time, invocation)
         except SchedulerError:
             if backend is not None or not shutil.which("crontab"):
                 raise
             selected = "cron"
-            _install_cron(paths, time)
+            _install_cron(paths, time, invocation)
     elif selected == "cron":
-        _install_cron(paths, time)
+        _install_cron(paths, time, invocation)
     else:
         raise SchedulerError(f"Backend de scheduler no soportado: {selected}")
     return selected
@@ -115,12 +123,17 @@ def default_backend() -> str:
 
 
 def windows_task_xml(
-    executable: Path, paths: AppPaths, time: str, user_id: str = "S-1-5-21-test"
+    executable: Path,
+    paths: AppPaths,
+    time: str,
+    user_id: str = "S-1-5-21-test",
+    arguments: tuple[str, ...] | None = None,
 ) -> str:
     hour, minute = parse_time(time)
     start = datetime.now().astimezone().replace(hour=hour, minute=minute, second=0, microsecond=0)
     command = html.escape(str(executable), quote=True)
-    arguments = html.escape("-m seguidores run --if-due", quote=True)
+    argument_text = subprocess.list2cmdline(arguments or ("-m", "seguidores", "run", "--if-due"))
+    escaped_arguments = html.escape(argument_text, quote=True)
     working_directory = html.escape(str(paths.root), quote=True)
     principal = html.escape(user_id, quote=True)
     return f"""<?xml version="1.0" encoding="UTF-16"?>
@@ -158,7 +171,7 @@ def windows_task_xml(
   <Actions Context="Author">
     <Exec>
       <Command>{command}</Command>
-      <Arguments>{arguments}</Arguments>
+      <Arguments>{escaped_arguments}</Arguments>
       <WorkingDirectory>{working_directory}</WorkingDirectory>
     </Exec>
   </Actions>
@@ -166,11 +179,19 @@ def windows_task_xml(
 """
 
 
-def launchd_plist(executable: Path, paths: AppPaths, time: str) -> bytes:
+def launchd_plist(
+    executable: Path,
+    paths: AppPaths,
+    time: str,
+    arguments: tuple[str, ...] | None = None,
+) -> bytes:
     hour, minute = parse_time(time)
     payload = {
         "Label": MAC_LABEL,
-        "ProgramArguments": [str(executable), "-m", "seguidores", "run", "--if-due"],
+        "ProgramArguments": [
+            str(executable),
+            *(arguments or ("-m", "seguidores", "run", "--if-due")),
+        ],
         "StartCalendarInterval": {"Hour": hour, "Minute": minute},
         "RunAtLoad": True,
         "ProcessType": "Background",
@@ -180,10 +201,16 @@ def launchd_plist(executable: Path, paths: AppPaths, time: str) -> bytes:
     return plistlib.dumps(payload, fmt=plistlib.FMT_XML, sort_keys=True)
 
 
-def systemd_units(executable: Path, paths: AppPaths, time: str) -> tuple[str, str]:
+def systemd_units(
+    executable: Path,
+    paths: AppPaths,
+    time: str,
+    arguments: tuple[str, ...] | None = None,
+) -> tuple[str, str]:
     hour, minute = parse_time(time)
     command = " ".join(
-        _systemd_quote(value) for value in (str(executable), "-m", "seguidores", "run", "--if-due")
+        _systemd_quote(value)
+        for value in (str(executable), *(arguments or ("-m", "seguidores", "run", "--if-due")))
     )
     service = f"""[Unit]
 Description=Chequeo de seguidores de Instagram
@@ -211,9 +238,14 @@ WantedBy=timers.target
     return service, timer
 
 
-def cron_lines(executable: Path, paths: AppPaths, time: str) -> list[str]:
+def cron_lines(
+    executable: Path,
+    paths: AppPaths,
+    time: str,
+    arguments: tuple[str, ...] | None = None,
+) -> list[str]:
     hour, minute = parse_time(time)
-    command = shlex.join([str(executable), "-m", "seguidores", "run", "--if-due"])
+    command = shlex.join([str(executable), *(arguments or ("-m", "seguidores", "run", "--if-due"))])
     log = shlex.quote(str(paths.logs / "scheduled.log"))
     return [
         CRON_MARKER,
@@ -223,10 +255,16 @@ def cron_lines(executable: Path, paths: AppPaths, time: str) -> list[str]:
     ]
 
 
-def _install_windows(paths: AppPaths, time: str) -> None:
+def _install_windows(paths: AppPaths, time: str, invocation: ScheduledInvocation) -> None:
     xml_path = paths.root / "windows-task.xml"
     xml_path.write_text(
-        windows_task_xml(Path(sys.executable), paths, time, _current_windows_sid()),
+        windows_task_xml(
+            invocation.executable,
+            paths,
+            time,
+            _current_windows_sid(),
+            invocation.arguments,
+        ),
         encoding="utf-16",
     )
     try:
@@ -235,10 +273,10 @@ def _install_windows(paths: AppPaths, time: str) -> None:
         xml_path.unlink(missing_ok=True)
 
 
-def _install_launchd(paths: AppPaths, time: str) -> None:
+def _install_launchd(paths: AppPaths, time: str, invocation: ScheduledInvocation) -> None:
     path = _launchd_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(launchd_plist(Path(sys.executable), paths, time))
+    path.write_bytes(launchd_plist(invocation.executable, paths, time, invocation.arguments))
     subprocess.run(
         ["launchctl", "bootout", f"gui/{os.getuid()}", str(path)],
         check=False,
@@ -248,8 +286,8 @@ def _install_launchd(paths: AppPaths, time: str) -> None:
     _run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(path)])
 
 
-def _install_systemd(paths: AppPaths, time: str) -> None:
-    service, timer = systemd_units(Path(sys.executable), paths, time)
+def _install_systemd(paths: AppPaths, time: str, invocation: ScheduledInvocation) -> None:
+    service, timer = systemd_units(invocation.executable, paths, time, invocation.arguments)
     service_path = _systemd_service_path()
     timer_path = _systemd_timer_path()
     service_path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,9 +302,9 @@ def _install_systemd(paths: AppPaths, time: str) -> None:
         raise
 
 
-def _install_cron(paths: AppPaths, time: str) -> None:
+def _install_cron(paths: AppPaths, time: str, invocation: ScheduledInvocation) -> None:
     current = _without_managed_cron(_read_crontab())
-    managed = "\n".join(cron_lines(Path(sys.executable), paths, time))
+    managed = "\n".join(cron_lines(invocation.executable, paths, time, invocation.arguments))
     _write_crontab((current.rstrip() + "\n" + managed + "\n").lstrip())
 
 

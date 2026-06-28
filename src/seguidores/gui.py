@@ -29,6 +29,7 @@ from seguidores.config import (
     parse_time,
     save_config,
 )
+from seguidores.launcher import scheduled_invocation
 from seguidores.notifier import (
     NotificationError,
     get_telegram_token,
@@ -536,7 +537,11 @@ class SeguidoresApp:
 
         def work() -> str:
             if enabled:
-                return scheduler.install(self.paths, time)
+                return scheduler.install(
+                    self.paths,
+                    time,
+                    invocation=scheduled_invocation(graphical=True),
+                )
             if previous_backend:
                 scheduler.uninstall(previous_backend)
             return ""
@@ -730,6 +735,13 @@ class LoginDialog:
 
 
 def main(paths: AppPaths | None = None) -> int:
+    if sys.argv[1:] == ["--version"]:
+        print(f"seguidores-gui {__version__}")
+        return 0
+    if sys.argv[1:] == ["--scheduled-run"]:
+        from seguidores.cli import main as cli_main
+
+        return cli_main(["run", "--if-due"])
     paths = paths or app_paths()
     paths.ensure()
     _configure_logging(paths)

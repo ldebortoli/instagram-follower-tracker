@@ -1,8 +1,9 @@
+import sys
 import tkinter as tk
 
 import pytest
 
-from seguidores.gui import ALL_ACCOUNTS, SeguidoresApp
+from seguidores.gui import ALL_ACCOUNTS, SeguidoresApp, main
 from seguidores.paths import AppPaths
 
 
@@ -35,3 +36,19 @@ def test_gui_account_form_builds_valid_account(gui):
     assert account.name == "personal"
     assert account.username == "owner.name"
     assert account.login_username == "owner.name"
+
+
+def test_gui_version_mode_does_not_open_window(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["seguidores-gui", "--version"])
+
+    assert main() == 0
+    assert "seguidores-gui 0.2.0" in capsys.readouterr().out
+
+
+def test_gui_scheduled_mode_delegates_to_cli(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sys, "argv", ["seguidores-gui", "--scheduled-run"])
+    monkeypatch.setattr("seguidores.cli.main", lambda arguments: calls.append(arguments) or 7)
+
+    assert main() == 7
+    assert calls == [["run", "--if-due"]]

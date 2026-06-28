@@ -41,3 +41,19 @@ def test_cron_has_daily_and_reboot_entries(tmp_path):
     assert lines[1].startswith("7 6 * * *")
     assert lines[2].startswith("@reboot")
     assert all("--if-due" in line for line in lines[1:3])
+
+
+def test_renderers_accept_frozen_gui_invocation(tmp_path):
+    executable = Path("C:/Apps/seguidores-gui.exe")
+    arguments = ("--scheduled-run",)
+    paths = AppPaths(tmp_path)
+
+    xml = windows_task_xml(executable, paths, "10:30", arguments=arguments)
+    plist = plistlib.loads(launchd_plist(executable, paths, "10:30", arguments))
+    service, _timer = systemd_units(executable, paths, "10:30", arguments)
+    cron = cron_lines(executable, paths, "10:30", arguments)
+
+    assert "--scheduled-run" in xml
+    assert plist["ProgramArguments"] == [str(executable), "--scheduled-run"]
+    assert "--scheduled-run" in service
+    assert "--scheduled-run" in cron[1]
