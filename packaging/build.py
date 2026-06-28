@@ -145,7 +145,7 @@ def _package(system: str, architecture: str, console: Path, gui: Path) -> Path:
     RELEASE.mkdir(parents=True, exist_ok=True)
     archive_base = RELEASE / package_name
     if system == "Darwin":
-        archive = archive_base.with_suffix(".zip")
+        archive = archive_base.parent / f"{archive_base.name}.zip"
         subprocess.run(
             [
                 "ditto",
