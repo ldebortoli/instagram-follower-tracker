@@ -43,7 +43,11 @@ def parser() -> argparse.ArgumentParser:
     commands = root.add_subparsers(dest="command", required=True)
 
     commands.add_parser("init", help="Crea una configuración vacía.")
-    commands.add_parser("setup", help="Asistente interactivo de configuración inicial.")
+    setup = commands.add_parser("setup", help="Abre la configuración inicial.")
+    setup.add_argument(
+        "--terminal", action="store_true", help="Usa el asistente de texto en vez de la ventana."
+    )
+    commands.add_parser("gui", help="Abre la interfaz gráfica.")
 
     account = commands.add_parser("account", help="Administra cuentas.")
     account_commands = account.add_subparsers(dest="account_command", required=True)
@@ -140,8 +144,12 @@ def _dispatch(arguments: argparse.Namespace, paths: AppPaths) -> int:
         message = "Configuración creada" if created else "La configuración ya existe"
         print(f"{message}: {paths.config}")
         return 0
-    if arguments.command == "setup":
-        return _setup(paths)
+    if arguments.command in {"setup", "gui"}:
+        if arguments.command == "setup" and arguments.terminal:
+            return _setup_terminal(paths)
+        from seguidores.gui import main as gui_main
+
+        return gui_main(paths)
 
     config = load_config(paths)
     if arguments.command == "account":
@@ -294,7 +302,7 @@ def _schedule_command(arguments: argparse.Namespace, paths: AppPaths, config) ->
     return 0
 
 
-def _setup(paths: AppPaths) -> int:
+def _setup_terminal(paths: AppPaths) -> int:
     config = load_config(paths, create=True)
     print(f"Configuración: {paths.config}")
     name = input("Nombre local de la cuenta [personal]: ").strip() or "personal"

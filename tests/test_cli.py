@@ -1,4 +1,14 @@
-from seguidores.cli import main
+from seguidores.cli import main, parser
+
+
+def test_setup_uses_gui_by_default_and_keeps_terminal_option():
+    graphical = parser().parse_args(["setup"])
+    terminal = parser().parse_args(["setup", "--terminal"])
+    gui = parser().parse_args(["gui"])
+
+    assert not graphical.terminal
+    assert terminal.terminal
+    assert gui.command == "gui"
 
 
 def test_init_and_empty_account_list(tmp_path, monkeypatch, capsys):

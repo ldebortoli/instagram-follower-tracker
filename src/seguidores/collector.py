@@ -15,6 +15,10 @@ class CollectionError(RuntimeError):
     pass
 
 
+class TwoFactorRequired(CollectionError):
+    pass
+
+
 class Collector(Protocol):
     def collect(self, account: AccountConfig) -> SocialGraph: ...
 
@@ -44,16 +48,41 @@ class InstagramCollector:
         return SocialGraph.from_iterables(followers, following)
 
     def login(self, account: AccountConfig) -> Path:
-        instaloader = _instaloader()
-        loader = _loader(instaloader)
         password = getpass(f"Contraseña de @{account.login_username} (no se guarda): ")
         try:
-            loader.login(account.login_username, password)
-        except instaloader.exceptions.TwoFactorAuthRequiredException:
+            return self.login_with_credentials(account, password)
+        except TwoFactorRequired:
             code = input("Código de autenticación de dos factores: ").strip()
-            loader.two_factor_login(code)
+            return self.login_with_credentials(account, password, code)
+
+    def login_with_credentials(
+        self,
+        account: AccountConfig,
+        password: str,
+        two_factor_code: str | None = None,
+    ) -> Path:
+        if not password:
+            raise CollectionError("La contraseña no puede estar vacía.")
+        instaloader = _instaloader()
+        loader = _loader(instaloader)
+        try:
+            loader.login(account.login_username, password)
+        except instaloader.exceptions.TwoFactorAuthRequiredException as exc:
+            if not two_factor_code:
+                raise TwoFactorRequired(
+                    "Instagram solicitó el código de autenticación de dos factores."
+                ) from exc
+            try:
+                loader.two_factor_login(two_factor_code.strip())
+            except Exception as login_exc:
+                raise CollectionError(
+                    f"El código de autenticación no fue aceptado: {login_exc}"
+                ) from login_exc
         except Exception as exc:
             raise CollectionError(f"No se pudo iniciar sesión en Instagram: {exc}") from exc
+        return self._save_session(account, loader)
+
+    def _save_session(self, account: AccountConfig, loader: object) -> Path:
         self.paths.ensure()
         session_file = self.session_file(account)
         loader.save_session_to_file(str(session_file))

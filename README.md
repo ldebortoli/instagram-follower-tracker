@@ -34,6 +34,13 @@ usa `notify-send`.
 - Git.
 - Una cuenta de Instagram propia con acceso legítimo.
 
+La interfaz usa Tkinter, incluido normalmente con Python en Windows y macOS. En algunas
+distribuciones Linux hay que instalarlo por separado; por ejemplo, en Debian/Ubuntu:
+
+```bash
+sudo apt install python3-tk libnotify-bin
+```
+
 ```bash
 git clone https://github.com/ldebortoli/instagram-follower-tracker.git
 cd instagram-follower-tracker
@@ -57,17 +64,33 @@ python -m pip install -e .
 No muevas ni borres ese entorno virtual después de instalar la tarea. Si cambia de ruta, ejecutá
 `seguidores schedule uninstall` y volvé a instalarla desde el nuevo entorno.
 
-## Configuración inicial
+## Interfaz gráfica y configuración inicial
 
-El asistente reúne todos los pasos, pero no se ejecuta automáticamente:
+Abrí la interfaz desde el entorno virtual:
 
 ```bash
 seguidores setup
+# Equivalente, y sin consola en Windows:
+seguidores-gui
 ```
 
-También se puede configurar paso a paso:
+La ventana tiene cuatro secciones:
+
+1. **Cuentas:** permite agregar varias cuentas, iniciar sesión con contraseña y 2FA, consultar el
+   estado de la cookie e importar una descarga JSON oficial.
+2. **Notificaciones:** activa el popup, configura Telegram y envía un mensaje de prueba. El token se
+   guarda en el almacén seguro del sistema.
+3. **Automatización:** define la hora e instala el scheduler correcto para Windows, macOS o Linux.
+4. **Resultados:** muestra el reporte del último chequeo manual o importación.
+
+Las consultas a Instagram, Telegram y al scheduler se ejecutan fuera del hilo de la ventana para que
+la interfaz siga respondiendo. La contraseña y el código 2FA sólo viven durante el inicio de sesión y
+no se escriben en la configuración.
+
+La interfaz no se abre automáticamente al instalar. También se puede usar el flujo de terminal:
 
 ```bash
+seguidores setup --terminal
 seguidores init
 seguidores account add personal --username MI_USUARIO
 seguidores auth login personal
