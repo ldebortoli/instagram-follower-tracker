@@ -180,11 +180,16 @@ class SeguidoresApp:
             text="Importar sesión del navegador",
             command=self._import_browser_session,
         ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        ttk.Button(
+            buttons,
+            text="Ingresar sessionid manualmente",
+            command=self._import_session_id,
+        ).grid(row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         ttk.Button(buttons, text="Importar JSON de Instagram", command=self._import_export).grid(
-            row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0)
+            row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0)
         )
         ttk.Button(buttons, text="Eliminar cuenta", command=self._remove_account).grid(
-            row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0)
+            row=4, column=0, columnspan=2, sticky="ew", pady=(8, 0)
         )
 
     def _form_row(
@@ -470,6 +475,11 @@ class SeguidoresApp:
         account = self._save_account()
         if account:
             BrowserSessionDialog(self, account)
+
+    def _import_session_id(self) -> None:
+        account = self._save_account()
+        if account:
+            SessionIdDialog(self, account)
 
     def _import_export(self) -> None:
         account = self._save_account()
@@ -839,6 +849,69 @@ class BrowserSessionDialog:
             self.app._show_failure("Importar sesión", exc)
 
         self.app.run_async("Importando y validando la sesión…", work, success, error)
+
+
+class SessionIdDialog:
+    def __init__(self, app: SeguidoresApp, account: AccountConfig):
+        self.app = app
+        self.account = account
+        self.window = tk.Toplevel(app.root)
+        self.window.title("Ingresar sessionid")
+        self.window.resizable(False, False)
+        self.window.transient(app.root)
+        self.window.grab_set()
+        self.session_id = tk.StringVar()
+
+        frame = ttk.Frame(self.window, padding=18)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(
+            frame,
+            text=(
+                f"Pegá el valor de la cookie sessionid correspondiente a "
+                f"@{account.login_username}. Se validará antes de guardarlo."
+            ),
+            wraplength=440,
+        ).pack(anchor="w")
+        entry = ttk.Entry(frame, textvariable=self.session_id, show="•", width=58)
+        entry.pack(fill="x", pady=(14, 0))
+        ttk.Label(
+            frame,
+            text=(
+                "Este valor permite acceder a tu cuenta: tratalo como una contraseña. "
+                "No se mostrará en logs ni diagnósticos."
+            ),
+            wraplength=440,
+        ).pack(anchor="w", pady=(8, 0))
+        buttons = ttk.Frame(frame)
+        buttons.pack(anchor="e", pady=(16, 0))
+        ttk.Button(buttons, text="Cancelar", command=self.window.destroy).pack(
+            side="left", padx=(0, 8)
+        )
+        ttk.Button(buttons, text="Validar y guardar", command=self._submit).pack(side="left")
+        self.window.bind("<Return>", lambda _event: self._submit())
+        entry.focus_set()
+
+    def _submit(self) -> None:
+        session_id = self.session_id.get()
+        self.session_id.set("")
+
+        def work() -> Path:
+            return InstagramCollector(self.app.paths).import_session_id(self.account, session_id)
+
+        def success(_path: Path) -> None:
+            self.app._refresh_accounts(self.account.name)
+            self.app._set_status(f"sessionid de {self.account.name} validado y guardado.")
+            messagebox.showinfo(
+                "Instagram",
+                "El sessionid fue validado y la sesión quedó guardada.",
+                parent=self.window,
+            )
+            self.window.destroy()
+
+        def error(exc: Exception) -> None:
+            self.app._show_failure("Validar sessionid", exc)
+
+        self.app.run_async("Validando sessionid…", work, success, error)
 
 
 def main(paths: AppPaths | None = None) -> int:

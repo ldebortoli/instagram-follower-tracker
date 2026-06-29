@@ -208,3 +208,30 @@ def test_browser_import_filters_instagram_cookies_and_validates(tmp_path, monkey
     assert session.exists()
     assert loader.context._session.cookies.get("sessionid") == "browser-session"
     assert loader.context._session.cookies.get("unrelated") is None
+
+
+def test_manual_session_id_is_extracted_validated_and_clears_cooldown(tmp_path, monkeypatch):
+    loader = FakeLoader()
+    loader.context._session.cookies.clear()
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    collector = InstagramCollector(AppPaths(tmp_path))
+    collector.store.register_cooldown("owner", 401)
+    account = AccountConfig("personal", "target", "owner")
+
+    session = collector.import_session_id(
+        account, 'sessionid="manual-session-value"; Path=/; Secure'
+    )
+
+    assert session.exists()
+    assert loader.context._session.cookies.get("sessionid") == "manual-session-value"
+    assert collector.store.active_cooldown("owner") is None
+
+
+@pytest.mark.parametrize("value", ["", "foo=bar; sessionid=value", "contains whitespace"])
+def test_manual_session_id_rejects_invalid_values(tmp_path, value):
+    collector = InstagramCollector(AppPaths(tmp_path))
+    account = AccountConfig("personal", "owner", "owner")
+
+    with pytest.raises(CollectionError, match="sessionid"):
+        collector.import_session_id(account, value)

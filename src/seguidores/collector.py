@@ -133,6 +133,22 @@ class InstagramCollector:
             ) from exc
         return self._save_session(account, loader)
 
+    def import_session_id(self, account: AccountConfig, session_id: str) -> Path:
+        value = _normalize_session_id(session_id)
+        loader = _loader(_instaloader())
+        try:
+            loader.context.update_cookies({"sessionid": value})
+            loader.context.username = account.login_username
+            _attach_recorder(loader)
+            self._validate_session(account, loader)
+        except CollectionError:
+            raise
+        except Exception as exc:
+            raise self._diagnostic_error(
+                "No se pudo validar el sessionid ingresado", exc, loader, account
+            ) from exc
+        return self._save_session(account, loader)
+
     def session_state(self, account: AccountConfig) -> SessionState:
         if cooldown := self.store.active_cooldown(account.login_username):
             return SessionState("cooldown", _cooldown_label(cooldown))
@@ -345,6 +361,21 @@ def _require_session_cookie(loader: object) -> None:
             "La sesión no contiene un sessionid válido. Importá una sesión activa desde "
             "Chrome, Edge o Firefox."
         )
+
+
+def _normalize_session_id(value: str) -> str:
+    normalized = value.strip()
+    if normalized.casefold().startswith("sessionid="):
+        normalized = normalized.split("=", maxsplit=1)[1].split(";", maxsplit=1)[0].strip()
+    if len(normalized) >= 2 and normalized[0] == normalized[-1] == '"':
+        normalized = normalized[1:-1]
+    if not normalized:
+        raise CollectionError("El sessionid no puede estar vacío.")
+    if len(normalized) > 4096 or any(character in normalized for character in ";\r\n\t "):
+        raise CollectionError(
+            "El sessionid no tiene un formato válido. Pegá sólo el valor de esa cookie."
+        )
+    return normalized
 
 
 def _cooldown_label(cooldown: RequestCooldown) -> str:

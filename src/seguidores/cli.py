@@ -90,6 +90,11 @@ def parser() -> argparse.ArgumentParser:
             "vivaldi",
         ),
     )
+    session_id_login = auth_commands.add_parser(
+        "import-sessionid",
+        help="Solicita un sessionid de forma oculta, lo valida y guarda la sesión.",
+    )
+    session_id_login.add_argument("account")
     auth_status = auth_commands.add_parser("status", help="Indica si existe una sesión local.")
     auth_status.add_argument("account")
 
@@ -183,6 +188,10 @@ def _dispatch(arguments: argparse.Namespace, paths: AppPaths) -> int:
         elif arguments.auth_command == "import-browser":
             session = collector.import_browser_session(account, arguments.browser)
             print(f"Sesión importada y validada: {session}")
+        elif arguments.auth_command == "import-sessionid":
+            session_id = getpass("sessionid de Instagram (entrada oculta): ")
+            session = collector.import_session_id(account, session_id)
+            print(f"sessionid validado y sesión guardada: {session}")
         else:
             state = collector.session_state(account)
             print(f"{account.name}: {state.label}")

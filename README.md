@@ -94,8 +94,8 @@ seguidores-gui
 La ventana tiene cuatro secciones:
 
 1. **Cuentas:** permite agregar varias cuentas, importar una sesión activa desde el navegador,
-   iniciar sesión con contraseña y 2FA, consultar el estado de la cookie e importar una descarga
-   JSON oficial.
+   ingresar un `sessionid` manualmente, iniciar sesión con contraseña y 2FA, consultar el estado
+   de la cookie e importar una descarga JSON oficial.
 2. **Notificaciones:** activa el popup, configura Telegram y envía un mensaje de prueba. El token se
    guarda en el almacén seguro del sistema.
 3. **Automatización:** define la hora e instala el scheduler correcto para Windows, macOS o Linux.
@@ -124,12 +124,24 @@ Instagram puede devolver una autenticación parcial sin un `sessionid` válido. 
 sesión normalmente en `instagram.com` desde Chrome, Edge o Firefox y usá **Importar sesión del
 navegador**. La aplicación valida la cookie antes de guardarla y no importa cookies de otros sitios.
 
+También podés usar **Ingresar sessionid manualmente** y pegar el valor puro o
+`sessionid=VALOR`. El campo está enmascarado, el valor se valida inmediatamente y nunca aparece en
+logs ni diagnósticos. En consola se solicita de forma oculta, sin pasarlo como argumento:
+
+```bash
+seguidores auth import-sessionid personal
+```
+
+Un `sessionid` concede acceso a la cuenta igual que una contraseña: no lo compartas ni lo pegues en
+comandos, archivos de configuración o capturas de pantalla.
+
 Para varias cuentas:
 
 ```bash
 seguidores account add trabajo --username CUENTA_TRABAJO --login-username CUENTA_TRABAJO
 seguidores auth login trabajo
 seguidores auth import-browser trabajo --browser edge
+seguidores auth import-sessionid trabajo
 seguidores account list
 ```
 

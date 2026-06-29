@@ -11,6 +11,14 @@ def test_setup_uses_gui_by_default_and_keeps_terminal_option():
     assert gui.command == "gui"
 
 
+def test_session_id_auth_is_interactive_and_not_a_command_argument():
+    arguments = parser().parse_args(["auth", "import-sessionid", "personal"])
+
+    assert arguments.auth_command == "import-sessionid"
+    assert arguments.account == "personal"
+    assert not hasattr(arguments, "sessionid")
+
+
 def test_init_and_empty_account_list(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("SEGUIDORES_HOME", str(tmp_path))
 
