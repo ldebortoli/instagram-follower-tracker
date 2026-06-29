@@ -14,6 +14,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
+from seguidores import __version__
 from seguidores.app import RunResult, Tracker
 from seguidores.collector import (
     ExportCollector,
@@ -38,7 +39,6 @@ from seguidores.notifier import (
 from seguidores.paths import AppPaths, app_paths
 from seguidores.report import format_report
 
-from seguidores import __version__
 from seguidores_desktop import scheduler
 from seguidores_desktop.launcher import scheduled_invocation
 from seguidores_desktop.scheduler import SchedulerStatus
@@ -313,6 +313,7 @@ class SeguidoresApp:
         manual.grid(row=2, column=0, sticky="ew", pady=(18, 0))
         manual.columnconfigure(0, weight=1)
         self.run_account = tk.StringVar(value=ALL_ACCOUNTS)
+        self.bypass_cooldown = tk.BooleanVar(value=False)
         self.run_account_combo = ttk.Combobox(
             manual, textvariable=self.run_account, state="readonly"
         )
@@ -320,6 +321,11 @@ class SeguidoresApp:
         ttk.Button(manual, text="Comprobar ahora", command=self._run_check).grid(
             row=0, column=1, sticky="e"
         )
+        ttk.Checkbutton(
+            manual,
+            text="Omitir el cooldown sólo en este chequeo manual",
+            variable=self.bypass_cooldown,
+        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _build_results_tab(self) -> None:
         self.results_text = tk.Text(
@@ -609,6 +615,25 @@ class SeguidoresApp:
             return
         selected = self.run_account.get()
         account_name = None if selected == ALL_ACCOUNTS else selected
+        bypass_cooldown = self.bypass_cooldown.get()
+        if bypass_cooldown:
+            confirmed = messagebox.askyesno(
+                "Omitir cooldown",
+                (
+                    "Esta protección existe porque Instagram rechazó requests recientes. "
+                    "Intentarlo antes de tiempo puede prolongar el bloqueo de la cuenta.\n\n"
+                    "¿Querés omitir el cooldown una sola vez para este chequeo manual?"
+                ),
+                icon="warning",
+                parent=self.root,
+            )
+            if not confirmed:
+                return
+            self.bypass_cooldown.set(False)
+            logging.getLogger("seguidores").warning(
+                "El usuario omitió el cooldown para un chequeo manual de %s.",
+                account_name or "todas las cuentas",
+            )
 
         def success(result: RunResult) -> None:
             parts = [format_report(item.comparison) for item in result.completed]
@@ -625,7 +650,14 @@ class SeguidoresApp:
 
         self.run_async(
             "Consultando Instagram…",
-            lambda: Tracker(self.paths, self.config).run(account_name=account_name),
+            lambda: Tracker(
+                self.paths,
+                self.config,
+                collector=InstagramCollector(
+                    self.paths,
+                    bypass_cooldown=bypass_cooldown,
+                ),
+            ).run(account_name=account_name),
             success,
         )
 

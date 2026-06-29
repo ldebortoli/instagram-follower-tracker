@@ -262,6 +262,23 @@ def test_collect_does_not_send_requests_during_active_cooldown(tmp_path, monkeyp
     assert not called
 
 
+def test_collect_can_bypass_active_cooldown_for_one_explicit_attempt(tmp_path, monkeypatch):
+    loader = FakeLoader()
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    collector = InstagramCollector(AppPaths(tmp_path), bypass_cooldown=True)
+    account = AccountConfig("personal", "target", "owner")
+    collector.session_file(account).parent.mkdir(parents=True)
+    collector.session_file(account).touch()
+    collector.store.register_cooldown("owner", 429)
+
+    graph = collector.collect(account)
+
+    assert graph.followers == frozenset({"alice", "bob"})
+    assert loader.context.web_requests
+    assert collector.store.active_cooldown("owner") is None
+
+
 def test_login_rejects_empty_session_cookie(tmp_path, monkeypatch):
     loader = FakeLoader()
     loader.context._session.cookies.set("sessionid", "")

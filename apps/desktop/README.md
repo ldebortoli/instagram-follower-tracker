@@ -10,6 +10,9 @@ Esta carpeta contiene exclusivamente las interfaces instalables de Seguidores:
 La lógica de Instagram y persistencia vive en `packages/core`. Jo Bot no se importa desde esta
 aplicación.
 
+El panel de chequeo manual incluye **Omitir el cooldown sólo en este chequeo manual**. La opción se
+desmarca después de confirmarla y nunca se aplica al scheduler.
+
 Desde la raíz del repositorio:
 
 ```powershell

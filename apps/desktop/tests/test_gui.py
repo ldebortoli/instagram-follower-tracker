@@ -2,6 +2,8 @@ import sys
 import tkinter as tk
 
 import pytest
+from seguidores.app import RunResult
+from seguidores.config import AccountConfig
 from seguidores.paths import AppPaths
 from seguidores_desktop.gui import ALL_ACCOUNTS, SeguidoresApp, main
 
@@ -35,6 +37,40 @@ def test_gui_account_form_builds_valid_account(gui):
     assert account.name == "personal"
     assert account.username == "owner.name"
     assert account.login_username == "owner.name"
+
+
+def test_gui_can_bypass_cooldown_for_one_manual_check(gui, monkeypatch):
+    captured = {}
+    gui.config.accounts = [AccountConfig("personal", "target", "owner")]
+    gui.bypass_cooldown.set(True)
+
+    class FakeCollector:
+        def __init__(self, paths, *, bypass_cooldown=False):
+            captured["paths"] = paths
+            captured["bypass_cooldown"] = bypass_cooldown
+
+    class FakeTracker:
+        def __init__(self, paths, config, collector=None):
+            captured["collector"] = collector
+
+        def run(self, *, account_name=None):
+            captured["account_name"] = account_name
+            return RunResult((), ())
+
+    monkeypatch.setattr("seguidores_desktop.gui.InstagramCollector", FakeCollector)
+    monkeypatch.setattr("seguidores_desktop.gui.Tracker", FakeTracker)
+    monkeypatch.setattr("seguidores_desktop.gui.messagebox.askyesno", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        gui,
+        "run_async",
+        lambda _label, work, _success: captured.setdefault("result", work()) is not None,
+    )
+
+    gui._run_check()
+
+    assert captured["bypass_cooldown"] is True
+    assert captured["account_name"] is None
+    assert gui.bypass_cooldown.get() is False
 
 
 def test_gui_version_mode_does_not_open_window(monkeypatch, capsys):

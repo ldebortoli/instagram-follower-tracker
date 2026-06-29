@@ -39,12 +39,14 @@ class Collector(Protocol):
 
 
 class InstagramCollector:
-    def __init__(self, paths: AppPaths):
+    def __init__(self, paths: AppPaths, *, bypass_cooldown: bool = False):
         self.paths = paths
         self.store = Store(paths.database)
+        self.bypass_cooldown = bypass_cooldown
 
     def collect(self, account: AccountConfig) -> SocialGraph:
-        self._raise_if_cooling_down(account)
+        if not self.bypass_cooldown:
+            self._raise_if_cooling_down(account)
         instaloader = _instaloader()
         loader = _loader(instaloader)
         session_file = self.session_file(account)

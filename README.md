@@ -108,6 +108,8 @@ La ventana tiene cuatro secciones:
 2. **Notificaciones:** activa el popup, configura Telegram y envía un mensaje de prueba. El token se
    guarda en el almacén seguro del sistema.
 3. **Automatización:** define la hora e instala el scheduler correcto para Windows, macOS o Linux.
+   En el chequeo manual permite omitir el cooldown una sola vez, con una confirmación de riesgo; las
+   ejecuciones automáticas siempre respetan la protección.
 4. **Resultados:** muestra el reporte del último chequeo manual o importación.
 
 Las consultas a Instagram, Telegram y al scheduler se ejecutan fuera del hilo de la ventana para que

@@ -32,6 +32,9 @@ instalarla desde la nueva ubicación.
 Las contraseñas de Instagram no se guardan. Las cookies de sesión, la configuración, el historial y
 los logs se almacenan en el perfil del usuario, no dentro de esta carpeta.
 
+La pestaña de automatización permite omitir el cooldown para un único chequeo manual después de
+mostrar una advertencia. Las ejecuciones automáticas siempre respetan el cooldown.
+
 La forma recomendada de autenticación es **Importar sesión del navegador** después de iniciar sesión
 en `instagram.com`. Los diagnósticos muestran request y response, pero ocultan cookies, tokens,
 contraseñas, cabeceras de autorización y valores CSRF.
