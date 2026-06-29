@@ -202,6 +202,13 @@ Los diagnósticos ocultan automáticamente contraseñas, cookies, `sessionid`, t
 cabeceras de autorización. Si el error sucede antes de enviar una request, se indica explícitamente
 que no hubo respuesta HTTP.
 
+Ante una response `401`, `403` o `429`, la aplicación activa un cooldown persistente para la cuenta
+usada al iniciar sesión. Durante ese período el chequeo manual y el scheduler se detienen antes de
+enviar otra request. El primer rechazo espera 24 horas; si reaparece, escala a 48 y 96 horas, con un
+máximo de 7 días. Una sesión del navegador importada y validada, o un chequeo posterior exitoso,
+limpia el contador. Varias cuentas locales que compartan el mismo `--login-username` comparten
+también el cooldown.
+
 ## Limitación importante de Instagram
 
 La API oficial de Instagram no ofrece a este tipo de aplicación una lista completa de seguidores y
@@ -211,7 +218,8 @@ pedir una verificación adicional cuando Instagram cambie sus endpoints. El cole
 resto del programa para poder reemplazarlo sin perder el historial.
 
 Usalo sólo con cuentas propias, con una frecuencia razonable y respetando las condiciones de
-Instagram. El programa no evita desafíos, bloqueos ni autenticación de dos factores.
+Instagram. El cooldown reduce reintentos riesgosos, pero no puede garantizar que Instagram no
+aplique desafíos, bloqueos ni autenticación de dos factores.
 
 ## Desarrollo
 

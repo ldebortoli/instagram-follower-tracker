@@ -3,7 +3,8 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from seguidores.models import Snapshot, SocialGraph
@@ -40,7 +41,28 @@ CREATE TABLE IF NOT EXISTS runs (
 
 CREATE INDEX IF NOT EXISTS runs_account_time
     ON runs(account_name, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS request_cooldowns (
+    login_username TEXT PRIMARY KEY,
+    failure_count INTEGER NOT NULL,
+    status_code INTEGER NOT NULL,
+    blocked_until TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
+
+COOLDOWN_BASE_HOURS = 24
+COOLDOWN_MAX_HOURS = 24 * 7
+COOLDOWN_RESET_DAYS = 30
+
+
+@dataclass(frozen=True)
+class RequestCooldown:
+    login_username: str
+    failure_count: int
+    status_code: int
+    blocked_until: datetime
+    updated_at: datetime
 
 
 class Store:
@@ -174,6 +196,82 @@ class Store:
                 """,
                 (account_name, limit),
             ).fetchall()
+
+    def active_cooldown(
+        self, login_username: str, at: datetime | None = None
+    ) -> RequestCooldown | None:
+        cooldown = self.get_cooldown(login_username)
+        if cooldown is None:
+            return None
+        current = _as_utc(at or datetime.now(UTC))
+        return cooldown if cooldown.blocked_until > current else None
+
+    def get_cooldown(self, login_username: str) -> RequestCooldown | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT login_username, failure_count, status_code, blocked_until, updated_at
+                FROM request_cooldowns
+                WHERE login_username = ?
+                """,
+                (login_username.casefold(),),
+            ).fetchone()
+        if row is None:
+            return None
+        return RequestCooldown(
+            login_username=row[0],
+            failure_count=row[1],
+            status_code=row[2],
+            blocked_until=datetime.fromisoformat(row[3]),
+            updated_at=datetime.fromisoformat(row[4]),
+        )
+
+    def register_cooldown(
+        self, login_username: str, status_code: int, at: datetime | None = None
+    ) -> RequestCooldown:
+        current = _as_utc(at or datetime.now(UTC))
+        normalized = login_username.casefold()
+        previous = self.get_cooldown(normalized)
+        if previous is None or current - previous.updated_at >= timedelta(days=COOLDOWN_RESET_DAYS):
+            failure_count = 1
+        else:
+            failure_count = previous.failure_count + 1
+        hours = min(COOLDOWN_BASE_HOURS * (2 ** (failure_count - 1)), COOLDOWN_MAX_HOURS)
+        cooldown = RequestCooldown(
+            login_username=normalized,
+            failure_count=failure_count,
+            status_code=status_code,
+            blocked_until=current + timedelta(hours=hours),
+            updated_at=current,
+        )
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO request_cooldowns(
+                    login_username, failure_count, status_code, blocked_until, updated_at
+                ) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(login_username) DO UPDATE SET
+                    failure_count = excluded.failure_count,
+                    status_code = excluded.status_code,
+                    blocked_until = excluded.blocked_until,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    cooldown.login_username,
+                    cooldown.failure_count,
+                    cooldown.status_code,
+                    cooldown.blocked_until.isoformat(),
+                    cooldown.updated_at.isoformat(),
+                ),
+            )
+        return cooldown
+
+    def clear_cooldown(self, login_username: str) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                "DELETE FROM request_cooldowns WHERE login_username = ?",
+                (login_username.casefold(),),
+            )
 
 
 def _as_utc(value: datetime) -> datetime:

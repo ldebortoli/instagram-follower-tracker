@@ -80,6 +80,12 @@ class RequestRecorder:
         )
         return response
 
+    def latest_status(self, status_codes: set[int]) -> int | None:
+        for exchange in reversed(self.exchanges):
+            if exchange.status_code in status_codes:
+                return exchange.status_code
+        return None
+
     def format(self, exception: Exception | None = None) -> str:
         lines = ["Diagnóstico HTTP (datos sensibles ocultos):"]
         if exception is not None:

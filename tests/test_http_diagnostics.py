@@ -33,6 +33,7 @@ def test_http_diagnostic_includes_exchange_and_redacts_secrets():
     assert "Seguidores-Test" in rendered
     assert "wait" in rendered
     assert REDACTED in rendered
+    assert recorder.latest_status({401, 403, 429}) == 401
     for secret in (
         "query-secret",
         "header-secret",

@@ -111,11 +111,14 @@ def test_login_with_credentials_saves_session_without_password(tmp_path, monkeyp
     monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
     monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
     account = AccountConfig("personal", "owner", "owner")
+    collector = InstagramCollector(AppPaths(tmp_path))
+    collector.store.register_cooldown("owner", 401)
 
-    session = InstagramCollector(AppPaths(tmp_path)).login_with_credentials(account, "secret")
+    session = collector.login_with_credentials(account, "secret")
 
     assert session.exists()
     assert "secret" not in session.read_text(encoding="utf-8")
+    assert collector.store.active_cooldown("owner") is None
 
 
 def test_login_with_credentials_requests_and_accepts_2fa(tmp_path, monkeypatch):
@@ -149,6 +152,27 @@ def test_login_failure_includes_temporary_session_exchange_without_secrets(tmp_p
     assert "HTTP 401 Unauthorized" in detail
     assert "password-secret" not in detail
     assert "response-secret" not in detail
+    cooldown = collector.store.active_cooldown("owner")
+    assert cooldown is not None
+    assert cooldown.status_code == 401
+
+
+def test_collect_does_not_send_requests_during_active_cooldown(tmp_path, monkeypatch):
+    collector = InstagramCollector(AppPaths(tmp_path))
+    collector.store.register_cooldown("owner", 401)
+    account = AccountConfig("personal", "target", "owner")
+    called = False
+
+    def unexpected_instaloader():
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr("seguidores.collector._instaloader", unexpected_instaloader)
+
+    with pytest.raises(CollectionError, match="no se envió ninguna request"):
+        collector.collect(account)
+
+    assert not called
 
 
 def test_login_rejects_empty_session_cookie(tmp_path, monkeypatch):

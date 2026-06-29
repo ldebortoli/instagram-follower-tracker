@@ -12,6 +12,9 @@ from seguidores.config import AccountConfig
 from seguidores.http_diagnostics import RequestRecorder
 from seguidores.models import SocialGraph
 from seguidores.paths import AppPaths
+from seguidores.storage import RequestCooldown, Store
+
+PROTECTED_HTTP_STATUSES = {401, 403, 429}
 
 
 class CollectionError(RuntimeError):
@@ -35,8 +38,10 @@ class Collector(Protocol):
 class InstagramCollector:
     def __init__(self, paths: AppPaths):
         self.paths = paths
+        self.store = Store(paths.database)
 
     def collect(self, account: AccountConfig) -> SocialGraph:
+        self._raise_if_cooling_down(account)
         instaloader = _instaloader()
         loader = _loader(instaloader)
         session_file = self.session_file(account)
@@ -53,9 +58,10 @@ class InstagramCollector:
             followers = {profile.username for profile in profile.get_followers()}
             following = {profile.username for profile in profile.get_followees()}
         except Exception as exc:
-            raise _diagnostic_error(
-                f"Instagram no permitió obtener @{account.username}", exc, loader
+            raise self._diagnostic_error(
+                f"Instagram no permitió obtener @{account.username}", exc, loader, account
             ) from exc
+        self.store.clear_cooldown(account.login_username)
         return SocialGraph.from_iterables(followers, following)
 
     def login(self, account: AccountConfig) -> Path:
@@ -87,11 +93,16 @@ class InstagramCollector:
             try:
                 loader.two_factor_login(two_factor_code.strip())
             except Exception as login_exc:
-                raise _diagnostic_error(
-                    "El código de autenticación no fue aceptado", login_exc, loader
+                raise self._diagnostic_error(
+                    "El código de autenticación no fue aceptado",
+                    login_exc,
+                    loader,
+                    account,
                 ) from login_exc
         except Exception as exc:
-            raise _diagnostic_error("No se pudo iniciar sesión en Instagram", exc, loader) from exc
+            raise self._diagnostic_error(
+                "No se pudo iniciar sesión en Instagram", exc, loader, account
+            ) from exc
         _attach_recorder(loader)
         self._validate_session(account, loader)
         return self._save_session(account, loader)
@@ -117,12 +128,14 @@ class InstagramCollector:
         except CollectionError:
             raise
         except Exception as exc:
-            raise _diagnostic_error(
-                f"No se pudo importar la sesión desde {browser}", exc, loader
+            raise self._diagnostic_error(
+                f"No se pudo importar la sesión desde {browser}", exc, loader, account
             ) from exc
         return self._save_session(account, loader)
 
     def session_state(self, account: AccountConfig) -> SessionState:
+        if cooldown := self.store.active_cooldown(account.login_username):
+            return SessionState("cooldown", _cooldown_label(cooldown))
         session_file = self.session_file(account)
         if not session_file.exists():
             return SessionState("missing", "Falta iniciar sesión")
@@ -140,21 +153,51 @@ class InstagramCollector:
             _require_session_cookie(loader)
             authenticated_username = loader.test_login()
         except Exception as exc:
-            raise _diagnostic_error("Instagram rechazó la sesión", exc, loader) from exc
+            raise self._diagnostic_error(
+                "Instagram rechazó la sesión", exc, loader, account
+            ) from exc
         if not authenticated_username:
-            raise _diagnostic_error(
+            raise self._diagnostic_error(
                 "Instagram no reconoció la sesión. Probá importarla desde el navegador",
                 CollectionError("La validación de sesión no devolvió un usuario autenticado."),
                 loader,
+                account,
             )
         if authenticated_username.casefold() != account.login_username.casefold():
-            raise _diagnostic_error(
+            raise self._diagnostic_error(
                 f"El navegador tiene abierta la cuenta @{authenticated_username}, pero esta "
                 f"configuración espera @{account.login_username}",
                 CollectionError("La sesión corresponde a otra cuenta."),
                 loader,
+                account,
             )
         loader.context.username = authenticated_username
+        self.store.clear_cooldown(account.login_username)
+
+    def _raise_if_cooling_down(self, account: AccountConfig) -> None:
+        cooldown = self.store.active_cooldown(account.login_username)
+        if cooldown is None:
+            return
+        raise CollectionError(
+            f"Protección activa para @{account.login_username}: no se envió ninguna request. "
+            f"{_cooldown_label(cooldown)}. Podés importar una sesión válida del navegador "
+            "para levantar el cooldown."
+        )
+
+    def _diagnostic_error(
+        self,
+        message: str,
+        exception: Exception,
+        loader: object,
+        account: AccountConfig | None = None,
+    ) -> CollectionError:
+        recorder = _attach_recorder(loader)
+        cooldown_message = ""
+        status_code = recorder.latest_status(PROTECTED_HTTP_STATUSES)
+        if status_code is not None and account is not None:
+            cooldown = self.store.register_cooldown(account.login_username, status_code)
+            cooldown_message = f"\n\nProtección activada. {_cooldown_label(cooldown)}."
+        return CollectionError(f"{message}{cooldown_message}\n\n{recorder.format(exception)}")
 
     def _save_session(self, account: AccountConfig, loader: object) -> Path:
         self.paths.ensure()
@@ -262,11 +305,6 @@ def _attach_recorder(loader: object) -> RequestRecorder:
     return recorder
 
 
-def _diagnostic_error(message: str, exception: Exception, loader: object) -> CollectionError:
-    diagnostic = _attach_recorder(loader).format(exception)
-    return CollectionError(f"{message}\n\n{diagnostic}")
-
-
 @contextmanager
 def _capture_login_requests(loader: object):
     """Attach diagnostics to the temporary Session created by Instaloader.login()."""
@@ -307,6 +345,15 @@ def _require_session_cookie(loader: object) -> None:
             "La sesión no contiene un sessionid válido. Importá una sesión activa desde "
             "Chrome, Edge o Firefox."
         )
+
+
+def _cooldown_label(cooldown: RequestCooldown) -> str:
+    until = cooldown.blocked_until.astimezone()
+    return (
+        f"Cooldown por HTTP {cooldown.status_code} hasta "
+        f"{until:%Y-%m-%d %H:%M %Z} "
+        f"(rechazo consecutivo {cooldown.failure_count})"
+    )
 
 
 def _browser_cookies(browser: str) -> list[object]:

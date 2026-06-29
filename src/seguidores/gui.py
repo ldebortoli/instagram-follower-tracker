@@ -351,6 +351,7 @@ class SeguidoresApp:
                 "saved": "Lista",
                 "invalid": "Inválida",
                 "missing": "Pendiente",
+                "cooldown": "Cooldown",
             }[session_state.code]
             state = "" if account.enabled else " (inactiva)"
             self.account_tree.insert(

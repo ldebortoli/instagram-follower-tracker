@@ -1,4 +1,4 @@
-# Seguidores 0.2.1 — paquete autónomo
+# Seguidores 0.2.2 — paquete autónomo
 
 Este paquete incluye Python y las dependencias necesarias. No hace falta instalar Python ni abrir el
 repositorio.
@@ -35,3 +35,7 @@ los logs se almacenan en el perfil del usuario, no dentro de esta carpeta.
 La forma recomendada de autenticación es **Importar sesión del navegador** después de iniciar sesión
 en `instagram.com`. Los diagnósticos muestran request y response, pero ocultan cookies, tokens,
 contraseñas, cabeceras de autorización y valores CSRF.
+
+Si Instagram responde `401`, `403` o `429`, se activa un cooldown persistente de 24 horas que
+crece ante rechazos consecutivos hasta un máximo de 7 días. Ni el chequeo manual ni la tarea diaria
+envían requests durante ese período. Importar y validar una sesión activa permite recuperarse.
