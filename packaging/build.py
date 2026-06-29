@@ -7,8 +7,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import PyInstaller.__main__
-
 from seguidores import __version__
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +48,8 @@ def _build_entry(
     windowed: bool = False,
     onefile: bool = True,
 ) -> None:
+    import PyInstaller.__main__
+
     arguments = [
         str(entry),
         "--noconfirm",
@@ -182,12 +182,21 @@ def _write_checksum(archive: Path) -> Path:
 
 
 def _reset_outputs() -> None:
-    for path in (BUILD, DIST, RELEASE):
+    # RELEASE contains packages the user may currently be testing. Removing the
+    # whole directory fails on Windows when an older executable is open and is
+    # unnecessary: the current archive and checksum are overwritten later.
+    for path in (BUILD, DIST):
         resolved = path.resolve()
         if ROOT.resolve() not in resolved.parents:
             raise RuntimeError(f"Ruta de build insegura: {resolved}")
         if resolved.exists():
-            shutil.rmtree(resolved)
+            try:
+                shutil.rmtree(resolved)
+            except PermissionError as exc:
+                raise RuntimeError(
+                    f"No se pudo limpiar {resolved}. Cerrá cualquier ejecutable de Seguidores "
+                    "abierto desde las carpetas build o dist y volvé a ejecutar el script."
+                ) from exc
 
 
 def _architecture(machine: str) -> str:

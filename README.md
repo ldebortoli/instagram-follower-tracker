@@ -269,6 +269,27 @@ ejecutables, valida el SHA-256 y descomprime el resultado en `release\test-curre
 posteriores se puede agregar `-SkipInstall` para evitar reinstalar dependencias; `-SkipTests` existe
 para pruebas rápidas, pero no debe usarse al preparar una Release.
 
+Para que, sólo después de completar correctamente todas esas validaciones, también prepare un
+commit y suba la rama actual a `origin`, agregá `-PushCode`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\build-windows.ps1" -Extract -PushCode
+```
+
+El mensaje automático es `update Seguidores to VERSION`. Se puede reemplazar agregando
+`-CommitMessage "mensaje del commit"`. `-PushCode` incluye archivos nuevos mediante `git add --all`,
+por lo que conviene revisar `git status` antes de ejecutarlo si el directorio contiene otros cambios.
+
+Cada ejecución guarda su salida completa en `%TEMP%\Seguidores-build\build-latest.log`. Si algún
+paso falla, también crea `%TEMP%\Seguidores-build\PROMPT-build-latest.txt`: adjuntá ambos archivos
+en el chat de Codex para que pueda reconstruir el error sin depender de una captura parcial de la
+terminal. Al iniciar una nueva ejecución, el script elimina ambos diagnósticos anteriores para que
+no se acumulen archivos. Los paquetes de versiones anteriores dentro de `release` se conservan y no
+bloquean un build nuevo. Antes de construir, el script cierra cualquier `seguidores.exe` o
+`seguidores-gui.exe` iniciado desde una carpeta de este repositorio; primero solicita un cierre
+normal y sólo fuerza la finalización si el proceso sigue activo. No cierra instalaciones ubicadas
+fuera del proyecto.
+
 PyInstaller no compila para otros sistemas desde uno solo. El workflow `package` construye y prueba
 los cuatro paquetes en runners nativos; al publicar un tag `v*`, los adjunta automáticamente a un
 GitHub Release.
