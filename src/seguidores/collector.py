@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
-from contextlib import suppress
+import sys
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 from getpass import getpass
 from pathlib import Path
 from typing import Protocol
 
 from seguidores.config import AccountConfig
+from seguidores.http_diagnostics import RequestRecorder
 from seguidores.models import SocialGraph
 from seguidores.paths import AppPaths
 
@@ -17,6 +20,12 @@ class CollectionError(RuntimeError):
 
 class TwoFactorRequired(CollectionError):
     pass
+
+
+@dataclass(frozen=True)
+class SessionState:
+    code: str
+    label: str
 
 
 class Collector(Protocol):
@@ -38,12 +47,14 @@ class InstagramCollector:
             )
         try:
             loader.load_session_from_file(account.login_username, str(session_file))
+            _attach_recorder(loader)
+            _require_session_cookie(loader)
             profile = instaloader.Profile.from_username(loader.context, account.username)
             followers = {profile.username for profile in profile.get_followers()}
             following = {profile.username for profile in profile.get_followees()}
         except Exception as exc:
-            raise CollectionError(
-                f"Instagram no permitió obtener @{account.username}: {exc}"
+            raise _diagnostic_error(
+                f"Instagram no permitió obtener @{account.username}", exc, loader
             ) from exc
         return SocialGraph.from_iterables(followers, following)
 
@@ -66,7 +77,8 @@ class InstagramCollector:
         instaloader = _instaloader()
         loader = _loader(instaloader)
         try:
-            loader.login(account.login_username, password)
+            with _capture_login_requests(loader):
+                loader.login(account.login_username, password)
         except instaloader.exceptions.TwoFactorAuthRequiredException as exc:
             if not two_factor_code:
                 raise TwoFactorRequired(
@@ -75,12 +87,74 @@ class InstagramCollector:
             try:
                 loader.two_factor_login(two_factor_code.strip())
             except Exception as login_exc:
-                raise CollectionError(
-                    f"El código de autenticación no fue aceptado: {login_exc}"
+                raise _diagnostic_error(
+                    "El código de autenticación no fue aceptado", login_exc, loader
                 ) from login_exc
         except Exception as exc:
-            raise CollectionError(f"No se pudo iniciar sesión en Instagram: {exc}") from exc
+            raise _diagnostic_error("No se pudo iniciar sesión en Instagram", exc, loader) from exc
+        _attach_recorder(loader)
+        self._validate_session(account, loader)
         return self._save_session(account, loader)
+
+    def import_browser_session(self, account: AccountConfig, browser: str) -> Path:
+        loader = _loader(_instaloader())
+        try:
+            cookies = _browser_cookies(browser)
+            instagram_cookies = {
+                cookie.name: cookie.value
+                for cookie in cookies
+                if "instagram" in cookie.domain.casefold()
+            }
+            if not instagram_cookies:
+                raise CollectionError(
+                    f"No encontré cookies de Instagram en {browser}. "
+                    "Iniciá sesión en instagram.com desde ese navegador."
+                )
+            loader.context.update_cookies(instagram_cookies)
+            loader.context.username = account.login_username
+            _attach_recorder(loader)
+            self._validate_session(account, loader)
+        except CollectionError:
+            raise
+        except Exception as exc:
+            raise _diagnostic_error(
+                f"No se pudo importar la sesión desde {browser}", exc, loader
+            ) from exc
+        return self._save_session(account, loader)
+
+    def session_state(self, account: AccountConfig) -> SessionState:
+        session_file = self.session_file(account)
+        if not session_file.exists():
+            return SessionState("missing", "Falta iniciar sesión")
+        loader = _loader(_instaloader())
+        try:
+            loader.load_session_from_file(account.login_username, str(session_file))
+        except Exception:
+            return SessionState("invalid", "Sesión dañada")
+        if not _session_cookie(loader):
+            return SessionState("invalid", "Sesión inválida: falta sessionid")
+        return SessionState("saved", "Sesión guardada")
+
+    def _validate_session(self, account: AccountConfig, loader: object) -> None:
+        try:
+            _require_session_cookie(loader)
+            authenticated_username = loader.test_login()
+        except Exception as exc:
+            raise _diagnostic_error("Instagram rechazó la sesión", exc, loader) from exc
+        if not authenticated_username:
+            raise _diagnostic_error(
+                "Instagram no reconoció la sesión. Probá importarla desde el navegador",
+                CollectionError("La validación de sesión no devolvió un usuario autenticado."),
+                loader,
+            )
+        if authenticated_username.casefold() != account.login_username.casefold():
+            raise _diagnostic_error(
+                f"El navegador tiene abierta la cuenta @{authenticated_username}, pero esta "
+                f"configuración espera @{account.login_username}",
+                CollectionError("La sesión corresponde a otra cuenta."),
+                loader,
+            )
+        loader.context.username = authenticated_username
 
     def _save_session(self, account: AccountConfig, loader: object) -> Path:
         self.paths.ensure()
@@ -164,11 +238,97 @@ def _instaloader():
 
 
 def _loader(instaloader):
-    return instaloader.Instaloader(
+    loader = instaloader.Instaloader(
         download_pictures=False,
         download_videos=False,
         download_video_thumbnails=False,
         save_metadata=False,
         compress_json=False,
         quiet=True,
+        max_connection_attempts=1,
     )
+    recorder = RequestRecorder()
+    loader._seguidores_http_recorder = recorder
+    _attach_recorder(loader)
+    return loader
+
+
+def _attach_recorder(loader: object) -> RequestRecorder:
+    recorder = getattr(loader, "_seguidores_http_recorder", None)
+    if recorder is None:
+        recorder = RequestRecorder()
+        loader._seguidores_http_recorder = recorder
+    recorder.attach(loader.context._session)
+    return recorder
+
+
+def _diagnostic_error(message: str, exception: Exception, loader: object) -> CollectionError:
+    diagnostic = _attach_recorder(loader).format(exception)
+    return CollectionError(f"{message}\n\n{diagnostic}")
+
+
+@contextmanager
+def _capture_login_requests(loader: object):
+    """Attach diagnostics to the temporary Session created by Instaloader.login()."""
+    module = sys.modules.get(loader.context.__class__.__module__)
+    requests_module = getattr(module, "requests", None)
+    session_factory = getattr(requests_module, "Session", None)
+    if module is None or session_factory is None:
+        yield
+        return
+
+    recorder = _attach_recorder(loader)
+
+    class RequestsProxy:
+        def Session(self, *args: object, **kwargs: object) -> object:  # noqa: N802
+            session = session_factory(*args, **kwargs)
+            recorder.attach(session)
+            return session
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(requests_module, name)
+
+    proxy = RequestsProxy()
+    module.requests = proxy
+    try:
+        yield
+    finally:
+        if module.requests is proxy:
+            module.requests = requests_module
+
+
+def _session_cookie(loader: object) -> str:
+    return str(loader.context._session.cookies.get_dict().get("sessionid") or "")
+
+
+def _require_session_cookie(loader: object) -> None:
+    if not _session_cookie(loader):
+        raise CollectionError(
+            "La sesión no contiene un sessionid válido. Importá una sesión activa desde "
+            "Chrome, Edge o Firefox."
+        )
+
+
+def _browser_cookies(browser: str) -> list[object]:
+    try:
+        import browser_cookie3
+    except ImportError as exc:
+        raise CollectionError(
+            "Falta browser-cookie3. Reinstalá la aplicación para importar cookies."
+        ) from exc
+    supported = {
+        "brave": browser_cookie3.brave,
+        "chrome": browser_cookie3.chrome,
+        "chromium": browser_cookie3.chromium,
+        "edge": browser_cookie3.edge,
+        "firefox": browser_cookie3.firefox,
+        "librewolf": browser_cookie3.librewolf,
+        "opera": browser_cookie3.opera,
+        "opera_gx": browser_cookie3.opera_gx,
+        "safari": browser_cookie3.safari,
+        "vivaldi": browser_cookie3.vivaldi,
+    }
+    normalized = browser.casefold()
+    if normalized not in supported:
+        raise CollectionError(f"Navegador no soportado: {browser}")
+    return list(supported[normalized]())

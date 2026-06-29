@@ -93,8 +93,9 @@ seguidores-gui
 
 La ventana tiene cuatro secciones:
 
-1. **Cuentas:** permite agregar varias cuentas, iniciar sesión con contraseña y 2FA, consultar el
-   estado de la cookie e importar una descarga JSON oficial.
+1. **Cuentas:** permite agregar varias cuentas, importar una sesión activa desde el navegador,
+   iniciar sesión con contraseña y 2FA, consultar el estado de la cookie e importar una descarga
+   JSON oficial.
 2. **Notificaciones:** activa el popup, configura Telegram y envía un mensaje de prueba. El token se
    guarda en el almacén seguro del sistema.
 3. **Automatización:** define la hora e instala el scheduler correcto para Windows, macOS o Linux.
@@ -119,11 +120,16 @@ La contraseña de Instagram se solicita de forma interactiva y no se guarda. Ins
 una cookie de sesión en el directorio local de la aplicación para las ejecuciones futuras. Tratá ese
 archivo como una credencial.
 
+Instagram puede devolver una autenticación parcial sin un `sessionid` válido. En ese caso, iniciá
+sesión normalmente en `instagram.com` desde Chrome, Edge o Firefox y usá **Importar sesión del
+navegador**. La aplicación valida la cookie antes de guardarla y no importa cookies de otros sitios.
+
 Para varias cuentas:
 
 ```bash
 seguidores account add trabajo --username CUENTA_TRABAJO --login-username CUENTA_TRABAJO
 seguidores auth login trabajo
+seguidores auth import-browser trabajo --browser edge
 seguidores account list
 ```
 
@@ -182,6 +188,19 @@ Datos por plataforma:
 - Linux: `${XDG_CONFIG_HOME:-~/.config}/seguidores`
 
 Para pruebas o instalaciones portables, `SEGUIDORES_HOME` reemplaza esa ubicación.
+
+## Diagnósticos HTTP
+
+Cuando una operación HTTP falla, la pestaña **Resultados** y el log muestran:
+
+- método y URL solicitada;
+- headers y body de la request;
+- estado, headers y body de la response;
+- tipo y mensaje de la excepción original.
+
+Los diagnósticos ocultan automáticamente contraseñas, cookies, `sessionid`, tokens, valores CSRF y
+cabeceras de autorización. Si el error sucede antes de enviar una request, se indica explícitamente
+que no hubo respuesta HTTP.
 
 ## Limitación importante de Instagram
 

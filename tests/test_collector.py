@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+import requests
 
 from seguidores.collector import (
     CollectionError,
@@ -54,6 +56,7 @@ class FakeLoader:
     def __init__(self, require_2fa=False):
         self.require_2fa = require_2fa
         self.two_factor_code = None
+        self.context = FakeContext()
 
     def login(self, _username, _password):
         if self.require_2fa:
@@ -62,9 +65,45 @@ class FakeLoader:
     def two_factor_login(self, code):
         self.two_factor_code = code
 
+    def test_login(self):
+        return "owner"
+
     def save_session_to_file(self, filename):
         # Instaloader owns the actual file format; the tracker only selects the path.
         Path(filename).touch()
+
+    def load_session_from_file(self, _username, _filename):
+        return None
+
+
+class FakeFailingLoginLoader(FakeLoader):
+    def login(self, username, password):
+        session = requests.Session()
+        prepared = requests.Request(
+            "POST",
+            "https://www.instagram.com/api/v1/web/accounts/login/ajax/",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={"username": username, "enc_password": password},
+        ).prepare()
+        response = requests.Response()
+        response.status_code = 401
+        response.reason = "Unauthorized"
+        response.headers["Content-Type"] = "application/json"
+        response._content = b'{"status":"fail","sessionid":"response-secret"}'
+        response.request = prepared
+        for hook in session.hooks["response"]:
+            hook(response)
+        raise RuntimeError("login rejected")
+
+
+class FakeContext:
+    def __init__(self):
+        self._session = requests.Session()
+        self._session.cookies.set("sessionid", "valid-for-test")
+        self.username = "owner"
+
+    def update_cookies(self, cookies):
+        self._session.cookies.update(cookies)
 
 
 def test_login_with_credentials_saves_session_without_password(tmp_path, monkeypatch):
@@ -93,3 +132,55 @@ def test_login_with_credentials_requests_and_accepts_2fa(tmp_path, monkeypatch):
 
     assert session.exists()
     assert loader.two_factor_code == "123456"
+
+
+def test_login_failure_includes_temporary_session_exchange_without_secrets(tmp_path, monkeypatch):
+    loader = FakeFailingLoginLoader()
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    collector = InstagramCollector(AppPaths(tmp_path))
+    account = AccountConfig("personal", "owner", "owner")
+
+    with pytest.raises(CollectionError) as error:
+        collector.login_with_credentials(account, "password-secret")
+
+    detail = str(error.value)
+    assert "POST https://www.instagram.com/api/v1/web/accounts/login/ajax/" in detail
+    assert "HTTP 401 Unauthorized" in detail
+    assert "password-secret" not in detail
+    assert "response-secret" not in detail
+
+
+def test_login_rejects_empty_session_cookie(tmp_path, monkeypatch):
+    loader = FakeLoader()
+    loader.context._session.cookies.set("sessionid", "")
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    collector = InstagramCollector(AppPaths(tmp_path))
+    account = AccountConfig("personal", "owner", "owner")
+
+    with pytest.raises(CollectionError, match="sessionid válido") as error:
+        collector.login_with_credentials(account, "secret")
+
+    assert "Diagnóstico HTTP" in str(error.value)
+    assert not collector.session_file(account).exists()
+
+
+def test_browser_import_filters_instagram_cookies_and_validates(tmp_path, monkeypatch):
+    loader = FakeLoader()
+    loader.context._session.cookies.clear()
+    cookies = [
+        SimpleNamespace(name="sessionid", value="browser-session", domain=".instagram.com"),
+        SimpleNamespace(name="unrelated", value="secret", domain=".example.com"),
+    ]
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    monkeypatch.setattr("seguidores.collector._browser_cookies", lambda _browser: cookies)
+    collector = InstagramCollector(AppPaths(tmp_path))
+    account = AccountConfig("personal", "owner", "owner")
+
+    session = collector.import_browser_session(account, "edge")
+
+    assert session.exists()
+    assert loader.context._session.cookies.get("sessionid") == "browser-session"
+    assert loader.context._session.cookies.get("unrelated") is None

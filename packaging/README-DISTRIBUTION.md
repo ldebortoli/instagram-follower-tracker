@@ -1,4 +1,4 @@
-# Seguidores 0.2.0 — paquete autónomo
+# Seguidores 0.2.1 — paquete autónomo
 
 Este paquete incluye Python y las dependencias necesarias. No hace falta instalar Python ni abrir el
 repositorio.
@@ -31,3 +31,7 @@ instalarla desde la nueva ubicación.
 
 Las contraseñas de Instagram no se guardan. Las cookies de sesión, la configuración, el historial y
 los logs se almacenan en el perfil del usuario, no dentro de esta carpeta.
+
+La forma recomendada de autenticación es **Importar sesión del navegador** después de iniciar sesión
+en `instagram.com`. Los diagnósticos muestran request y response, pero ocultan cookies, tokens,
+contraseñas, cabeceras de autorización y valores CSRF.

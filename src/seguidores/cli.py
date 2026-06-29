@@ -70,6 +70,26 @@ def parser() -> argparse.ArgumentParser:
     auth_commands = auth.add_subparsers(dest="auth_command", required=True)
     login = auth_commands.add_parser("login", help="Inicia sesión y guarda sólo la cookie local.")
     login.add_argument("account")
+    browser_login = auth_commands.add_parser(
+        "import-browser", help="Importa y valida la sesión activa de un navegador."
+    )
+    browser_login.add_argument("account")
+    browser_login.add_argument(
+        "--browser",
+        required=True,
+        choices=(
+            "brave",
+            "chrome",
+            "chromium",
+            "edge",
+            "firefox",
+            "librewolf",
+            "opera",
+            "opera_gx",
+            "safari",
+            "vivaldi",
+        ),
+    )
     auth_status = auth_commands.add_parser("status", help="Indica si existe una sesión local.")
     auth_status.add_argument("account")
 
@@ -160,9 +180,12 @@ def _dispatch(arguments: argparse.Namespace, paths: AppPaths) -> int:
         if arguments.auth_command == "login":
             session = collector.login(account)
             print(f"Sesión guardada localmente: {session}")
+        elif arguments.auth_command == "import-browser":
+            session = collector.import_browser_session(account, arguments.browser)
+            print(f"Sesión importada y validada: {session}")
         else:
-            exists = collector.session_file(account).exists()
-            print(f"{account.name}: {'sesión disponible' if exists else 'sin sesión'}")
+            state = collector.session_state(account)
+            print(f"{account.name}: {state.label}")
         return 0
     if arguments.command == "run":
         if not config.accounts:

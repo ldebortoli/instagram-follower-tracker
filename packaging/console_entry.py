@@ -2,6 +2,7 @@ import sqlite3
 import sys
 import tkinter
 
+import browser_cookie3
 import instaloader
 import keyring
 
@@ -9,6 +10,8 @@ from seguidores.cli import main
 
 
 def packaging_self_test() -> int:
+    if not callable(browser_cookie3.chrome):
+        return 1
     sqlite3.connect(":memory:").close()
     tkinter.Tcl()
     keyring.get_keyring()

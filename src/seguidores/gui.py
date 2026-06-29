@@ -175,11 +175,16 @@ class SeguidoresApp:
         ttk.Button(buttons, text="Iniciar sesión", command=self._login_account).grid(
             row=0, column=1, sticky="ew", padx=(5, 0)
         )
+        ttk.Button(
+            buttons,
+            text="Importar sesión del navegador",
+            command=self._import_browser_session,
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         ttk.Button(buttons, text="Importar JSON de Instagram", command=self._import_export).grid(
-            row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0)
+            row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0)
         )
         ttk.Button(buttons, text="Eliminar cuenta", command=self._remove_account).grid(
-            row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0)
+            row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0)
         )
 
     def _form_row(
@@ -341,7 +346,12 @@ class SeguidoresApp:
             self.account_tree.delete(item)
         collector = InstagramCollector(self.paths)
         for account in self.config.accounts:
-            session = "Lista" if collector.session_file(account).exists() else "Pendiente"
+            session_state = collector.session_state(account)
+            session = {
+                "saved": "Lista",
+                "invalid": "Inválida",
+                "missing": "Pendiente",
+            }[session_state.code]
             state = "" if account.enabled else " (inactiva)"
             self.account_tree.insert(
                 "", "end", iid=account.name, values=(f"@{account.username}{state}", session)
@@ -375,8 +385,8 @@ class SeguidoresApp:
         self.instagram_username.set(account.username)
         self.login_username.set(account.login_username)
         self.account_enabled.set(account.enabled)
-        available = InstagramCollector(self.paths).session_file(account).exists()
-        self.session_status.set("Sesión disponible" if available else "Falta iniciar sesión")
+        state = InstagramCollector(self.paths).session_state(account)
+        self.session_status.set(state.label)
 
     def _new_account(self) -> None:
         self.selected_account = None
@@ -454,6 +464,11 @@ class SeguidoresApp:
         account = self._save_account()
         if account:
             LoginDialog(self, account)
+
+    def _import_browser_session(self) -> None:
+        account = self._save_account()
+        if account:
+            BrowserSessionDialog(self, account)
 
     def _import_export(self) -> None:
         account = self._save_account()
@@ -646,7 +661,7 @@ class SeguidoresApp:
                 elif error:
                     error(value)
                 else:
-                    messagebox.showerror("Error", str(value), parent=self.root)
+                    self._show_failure("Error", value)
                     self._set_status("La operación falló.")
         except queue.Empty:
             pass
@@ -655,6 +670,16 @@ class SeguidoresApp:
 
     def _set_status(self, message: str) -> None:
         self.status.set(message)
+
+    def _show_failure(self, title: str, exception: Exception) -> None:
+        detail = str(exception)
+        self._show_report(detail)
+        summary = detail.splitlines()[0] if detail else type(exception).__name__
+        messagebox.showerror(
+            title,
+            f"{summary}\n\nLa request y la response sanitizadas están en Resultados.",
+            parent=self.root,
+        )
 
     def _close(self) -> None:
         if self.busy and not messagebox.askyesno(
@@ -729,9 +754,90 @@ class LoginDialog:
                 self.code_entry.focus_set()
             else:
                 self.status.set(str(exc))
-                messagebox.showerror("Instagram", str(exc), parent=self.window)
+                self.app._show_failure("Instagram", exc)
 
         self.app.run_async("Iniciando sesión en Instagram…", work, success, error)
+
+
+class BrowserSessionDialog:
+    BROWSERS = {
+        "Brave": "brave",
+        "Chrome": "chrome",
+        "Chromium": "chromium",
+        "Edge": "edge",
+        "Firefox": "firefox",
+        "LibreWolf": "librewolf",
+        "Opera": "opera",
+        "Opera GX": "opera_gx",
+        "Safari": "safari",
+        "Vivaldi": "vivaldi",
+    }
+
+    def __init__(self, app: SeguidoresApp, account: AccountConfig):
+        self.app = app
+        self.account = account
+        self.window = tk.Toplevel(app.root)
+        self.window.title("Importar sesión del navegador")
+        self.window.resizable(False, False)
+        self.window.transient(app.root)
+        self.window.grab_set()
+        defaults = {
+            "win32": ["Edge", "Chrome", "Firefox", "Brave"],
+            "darwin": ["Safari", "Chrome", "Firefox", "Brave"],
+        }
+        choices = defaults.get(sys.platform, ["Chrome", "Chromium", "Firefox", "Brave"])
+        self.browser = tk.StringVar(value=choices[0])
+
+        frame = ttk.Frame(self.window, padding=18)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(
+            frame,
+            text=(
+                f"Iniciá sesión como @{account.login_username} en instagram.com y elegí "
+                "ese navegador. Sólo se copiarán las cookies de Instagram."
+            ),
+            wraplength=430,
+        ).pack(anchor="w")
+        combo = ttk.Combobox(
+            frame,
+            textvariable=self.browser,
+            values=choices,
+            state="readonly",
+            width=24,
+        )
+        combo.pack(fill="x", pady=(14, 0))
+        ttk.Label(
+            frame,
+            text="Si el navegador bloquea su base de cookies, cerralo y volvé a intentar.",
+            wraplength=430,
+        ).pack(anchor="w", pady=(8, 0))
+        buttons = ttk.Frame(frame)
+        buttons.pack(anchor="e", pady=(16, 0))
+        ttk.Button(buttons, text="Cancelar", command=self.window.destroy).pack(
+            side="left", padx=(0, 8)
+        )
+        ttk.Button(buttons, text="Importar", command=self._submit).pack(side="left")
+
+    def _submit(self) -> None:
+        browser = self.BROWSERS[self.browser.get()]
+
+        def work() -> Path:
+            return InstagramCollector(self.app.paths).import_browser_session(self.account, browser)
+
+        def success(_path: Path) -> None:
+            self.app._refresh_accounts(self.account.name)
+            self.app._set_status(f"Sesión de {self.account.name} importada desde {browser}.")
+            messagebox.showinfo(
+                "Instagram",
+                "La sesión del navegador fue validada y guardada.",
+                parent=self.window,
+            )
+            self.window.destroy()
+
+        def error(exc: Exception) -> None:
+            self.app._show_failure("Importar sesión", exc)
+
+        self.app.run_async("Importando y validando la sesión…", work, success, error)
 
 
 def main(paths: AppPaths | None = None) -> int:
