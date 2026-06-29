@@ -8,7 +8,7 @@ from seguidores.collector import Collector, InstagramCollector
 from seguidores.config import AccountConfig, Config, parse_time
 from seguidores.locking import RunLock
 from seguidores.models import Comparison, SocialGraph, compare_graphs
-from seguidores.notifier import NotificationFailure, notify
+from seguidores.notifier import NotificationFailure, notify, notify_automatic_failure
 from seguidores.paths import AppPaths
 from seguidores.storage import Store
 
@@ -30,6 +30,7 @@ class RunResult:
     completed: tuple[AccountResult, ...]
     failed: tuple[AccountFailure, ...]
     skipped: bool = False
+    automatic_notification_failure: NotificationFailure | None = None
 
 
 class Tracker:
@@ -87,7 +88,25 @@ class Tracker:
                     )
                     self.log.exception("Falló el chequeo de %s", account.name)
                     failed.append(AccountFailure(account.name, message))
-        return RunResult(tuple(completed), tuple(failed))
+        automatic_notification_failure = None
+        if if_due and failed:
+            automatic_notification_failure = notify_automatic_failure(
+                [(failure.account_name, failure.error) for failure in failed],
+                self.config.notifications,
+                now,
+            )
+            if automatic_notification_failure:
+                self.log.error(
+                    "No se pudo avisar por Telegram el fallo automático: %s",
+                    automatic_notification_failure.error,
+                )
+            elif self.config.notifications.telegram.enabled:
+                self.log.info("Se avisó por Telegram el fallo de la ejecución automática.")
+        return RunResult(
+            tuple(completed),
+            tuple(failed),
+            automatic_notification_failure=automatic_notification_failure,
+        )
 
     def record_graph(
         self, account: AccountConfig, graph: SocialGraph, captured_at: datetime

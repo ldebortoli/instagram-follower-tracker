@@ -163,6 +163,11 @@ El token se guarda en el almacén seguro del sistema mediante `keyring`, no en `
 servidores sin almacén de credenciales se puede definir `SEGUIDORES_TELEGRAM_BOT_TOKEN` en el
 entorno del proceso, teniendo en cuenta que el scheduler también debe recibir esa variable.
 
+Cuando Telegram está habilitado, una ejecución programada que termina con error envía una alerta
+con la hora, la cuenta o etapa afectada y un resumen sanitizado. Los chequeos manuales no generan
+esta alarma. Si el propio envío a Telegram falla, se registra en `logs/seguidores.log`; no es posible
+avisar por Telegram que Telegram está caído.
+
 ```bash
 seguidores telegram disable
 seguidores telegram disable --forget-token

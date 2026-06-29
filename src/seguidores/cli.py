@@ -26,6 +26,7 @@ from seguidores.notifier import (
     delete_telegram_token,
     get_telegram_token,
     notify,
+    notify_automatic_failure,
     send_telegram,
     set_telegram_token,
 )
@@ -156,7 +157,13 @@ def main(argv: list[str] | None = None) -> int:
         AlreadyRunningError,
     ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
+        _alert_automatic_exception(arguments, paths, exc)
         return 2
+    except Exception as exc:
+        logging.getLogger("seguidores").exception("Fallo inesperado de la aplicación")
+        print(f"Error inesperado: {exc}", file=sys.stderr)
+        _alert_automatic_exception(arguments, paths, exc)
+        return 1
     except KeyboardInterrupt:
         print("Cancelado.", file=sys.stderr)
         return 130
@@ -208,6 +215,12 @@ def _dispatch(arguments: argparse.Namespace, paths: AppPaths) -> int:
                 print(f"Aviso: falló {failure.channel}: {failure.error}", file=sys.stderr)
         for failed in result.failed:
             print(f"Error en {failed.account_name}: {failed.error}", file=sys.stderr)
+        if result.automatic_notification_failure:
+            print(
+                "Aviso: no se pudo notificar por Telegram el error automático: "
+                f"{result.automatic_notification_failure.error}",
+                file=sys.stderr,
+            )
         return 1 if result.failed else 0
     if arguments.command == "import-export":
         account = config.account(arguments.account)
@@ -375,6 +388,34 @@ def _yes(prompt: str, *, default: bool) -> bool:
     if not answer:
         return default
     return answer in {"s", "si", "sí", "y", "yes"}
+
+
+def _alert_automatic_exception(
+    arguments: argparse.Namespace, paths: AppPaths, exception: Exception
+) -> None:
+    if arguments.command != "run" or not getattr(arguments, "if_due", False):
+        return
+    logger = logging.getLogger("seguidores")
+    logger.exception("La ejecución automática terminó con un error")
+    try:
+        config = load_config(paths)
+    except Exception:
+        logger.exception(
+            "No se pudo leer la configuración para avisar el error automático por Telegram"
+        )
+        return
+    notification_failure = notify_automatic_failure(
+        [("ejecución", str(exception))],
+        config.notifications,
+        datetime.now().astimezone(),
+    )
+    if notification_failure:
+        logger.error(
+            "No se pudo avisar por Telegram el error automático: %s",
+            notification_failure.error,
+        )
+    elif config.notifications.telegram.enabled:
+        logger.info("Se avisó por Telegram el error de la ejecución automática.")
 
 
 def _configure_logging(paths: AppPaths) -> None:

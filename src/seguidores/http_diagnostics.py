@@ -203,6 +203,10 @@ def _sanitize_text(value: str) -> str:
     return sanitized
 
 
+def sanitize_text(value: str) -> str:
+    return _sanitize_text(value)
+
+
 def _format_headers(headers: dict[str, str]) -> str:
     if not headers:
         return "Headers: {}"

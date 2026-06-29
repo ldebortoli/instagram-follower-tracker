@@ -246,6 +246,11 @@ class SeguidoresApp:
             telegram,
             text="Dejalo vacío para conservar el token guardado en el almacén seguro.",
         ).grid(row=3, column=1, sticky="w", pady=(4, 0))
+        ttk.Label(
+            telegram,
+            text="Con Telegram activo, los errores de ejecuciones automáticas también se avisan.",
+            wraplength=620,
+        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         buttons = ttk.Frame(tab)
         buttons.grid(row=2, column=0, sticky="ew", pady=(16, 0))

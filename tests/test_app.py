@@ -16,6 +16,11 @@ class FakeCollector:
         return self.graph
 
 
+class FailingCollector:
+    def collect(self, _account):
+        raise RuntimeError("Instagram unavailable")
+
+
 def configured_tracker(tmp_path, collector):
     config = Config(accounts=[AccountConfig("personal", "owner", "owner")])
     config.notifications.popup = False
@@ -49,3 +54,23 @@ def test_if_due_skips_before_time_and_after_success(tmp_path):
     assert not due.skipped
     assert duplicate.skipped
     assert collector.calls == 1
+
+
+def test_only_scheduled_failures_trigger_telegram_alert(tmp_path, monkeypatch):
+    tracker = configured_tracker(tmp_path, FailingCollector())
+    tracker.config.notifications.telegram.enabled = True
+    alerts = []
+
+    def capture(errors, config, occurred_at):
+        alerts.append((errors, config, occurred_at))
+        return None
+
+    monkeypatch.setattr("seguidores.app.notify_automatic_failure", capture)
+
+    scheduled = tracker.run(if_due=True, now=datetime(2026, 6, 28, 10, tzinfo=UTC))
+    manual = tracker.run(now=datetime(2026, 6, 28, 11, tzinfo=UTC))
+
+    assert scheduled.failed
+    assert manual.failed
+    assert len(alerts) == 1
+    assert alerts[0][0] == [("personal", "Instagram unavailable")]
