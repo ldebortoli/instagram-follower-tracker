@@ -253,6 +253,17 @@ python -m pip install -e ".[build-app]"
 python packaging/build.py
 ```
 
+En Windows, el flujo recomendado para construir y probar sin intervención de Codex es:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\build-windows.ps1" -Extract
+```
+
+El script reutiliza `.venv-build`, instala las dependencias, ejecuta Ruff y pytest, construye ambos
+ejecutables, valida el SHA-256 y descomprime el resultado en `release\test-current`. En ejecuciones
+posteriores se puede agregar `-SkipInstall` para evitar reinstalar dependencias; `-SkipTests` existe
+para pruebas rápidas, pero no debe usarse al preparar una Release.
+
 PyInstaller no compila para otros sistemas desde uno solo. El workflow `package` construye y prueba
 los cuatro paquetes en runners nativos; al publicar un tag `v*`, los adjunta automáticamente a un
 GitHub Release.
