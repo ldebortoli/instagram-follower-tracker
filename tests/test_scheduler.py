@@ -13,7 +13,8 @@ def test_windows_task_has_daily_and_catch_up_triggers(tmp_path):
     assert "<DaysInterval>1</DaysInterval>" in xml
     assert "<LogonTrigger>" in xml
     assert "<StartWhenAvailable>true</StartWhenAvailable>" in xml
-    assert "S-1-5-21-123" in xml
+    assert xml.count("<UserId>S-1-5-21-123</UserId>") == 2
+    assert "<RunLevel>LeastPrivilege</RunLevel>" in xml
     assert "--if-due" in xml
 
 

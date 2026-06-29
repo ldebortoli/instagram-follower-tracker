@@ -51,8 +51,11 @@ CREATE TABLE IF NOT EXISTS request_cooldowns (
 );
 """
 
-COOLDOWN_BASE_HOURS = 24
-COOLDOWN_MAX_HOURS = 24 * 7
+ACCESS_COOLDOWN_BASE_HOURS = 24
+ACCESS_COOLDOWN_MAX_HOURS = 24 * 7
+RATE_LIMIT_SHORT_HOURS = 2
+RATE_LIMIT_LONG_HOURS = 24
+RATE_LIMIT_LONG_AFTER = 3
 COOLDOWN_RESET_DAYS = 30
 
 
@@ -71,6 +74,7 @@ class Store:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as connection:
             connection.executescript(SCHEMA)
+            _migrate_cooldown_policy(connection)
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
@@ -232,11 +236,15 @@ class Store:
         current = _as_utc(at or datetime.now(UTC))
         normalized = login_username.casefold()
         previous = self.get_cooldown(normalized)
-        if previous is None or current - previous.updated_at >= timedelta(days=COOLDOWN_RESET_DAYS):
+        if (
+            previous is None
+            or previous.status_code != status_code
+            or current - previous.updated_at >= timedelta(days=COOLDOWN_RESET_DAYS)
+        ):
             failure_count = 1
         else:
             failure_count = previous.failure_count + 1
-        hours = min(COOLDOWN_BASE_HOURS * (2 ** (failure_count - 1)), COOLDOWN_MAX_HOURS)
+        hours = _cooldown_hours(status_code, failure_count)
         cooldown = RequestCooldown(
             login_username=normalized,
             failure_count=failure_count,
@@ -278,3 +286,37 @@ def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         raise ValueError("La fecha debe incluir zona horaria.")
     return value.astimezone(UTC)
+
+
+def _cooldown_hours(status_code: int, failure_count: int) -> int:
+    if status_code == 429:
+        return (
+            RATE_LIMIT_SHORT_HOURS
+            if failure_count < RATE_LIMIT_LONG_AFTER
+            else RATE_LIMIT_LONG_HOURS
+        )
+    return min(
+        ACCESS_COOLDOWN_BASE_HOURS * (2 ** (failure_count - 1)),
+        ACCESS_COOLDOWN_MAX_HOURS,
+    )
+
+
+def _migrate_cooldown_policy(connection: sqlite3.Connection) -> None:
+    """Shorten 429 cooldowns persisted by versions that always waited at least 24 hours."""
+    rows = connection.execute(
+        """
+        SELECT login_username, failure_count, blocked_until, updated_at
+        FROM request_cooldowns
+        WHERE status_code = 429
+        """
+    ).fetchall()
+    for login_username, failure_count, blocked_until, updated_at in rows:
+        previous_until = datetime.fromisoformat(blocked_until)
+        policy_until = datetime.fromisoformat(updated_at) + timedelta(
+            hours=_cooldown_hours(429, failure_count)
+        )
+        if previous_until > policy_until:
+            connection.execute(
+                "UPDATE request_cooldowns SET blocked_until = ? WHERE login_username = ?",
+                (policy_until.isoformat(), login_username),
+            )

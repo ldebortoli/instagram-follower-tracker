@@ -147,7 +147,7 @@ def windows_task_xml(
       <Enabled>true</Enabled>
       <ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay>
     </CalendarTrigger>
-    <LogonTrigger><Enabled>true</Enabled></LogonTrigger>
+    <LogonTrigger><Enabled>true</Enabled><UserId>{principal}</UserId></LogonTrigger>
   </Triggers>
   <Principals>
     <Principal id="Author">

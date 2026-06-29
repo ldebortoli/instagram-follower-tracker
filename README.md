@@ -25,8 +25,9 @@ alguien empezó o dejó de seguirte.
 | Linux sin systemd | `cron` | entrada diaria más `@reboot` |
 
 El chequeo se instala para el usuario actual, sin requerir que una ventana del programa quede
-abierta. Las notificaciones de escritorio requieren una sesión gráfica iniciada. En Linux, el popup
-usa `notify-send`.
+abierta ni solicitar elevación como administrador. En Windows, tanto la ejecución diaria como la
+recuperación al iniciar sesión quedan limitadas a ese usuario. Las notificaciones de escritorio
+requieren una sesión gráfica iniciada. En Linux, el popup usa `notify-send`.
 
 ## Aplicaciones autónomas
 
@@ -221,10 +222,11 @@ que no hubo respuesta HTTP.
 
 Ante una response `401`, `403` o `429`, la aplicación activa un cooldown persistente para la cuenta
 usada al iniciar sesión. Durante ese período el chequeo manual y el scheduler se detienen antes de
-enviar otra request. El primer rechazo espera 24 horas; si reaparece, escala a 48 y 96 horas, con un
-máximo de 7 días. Una sesión del navegador importada y validada, o un chequeo posterior exitoso,
-limpia el contador. Varias cuentas locales que compartan el mismo `--login-username` comparten
-también el cooldown.
+enviar otra request. Para `429`, los dos primeros rechazos consecutivos esperan 2 horas; el tercero y
+los siguientes esperan 24 horas. Los `401` y `403` esperan inicialmente 24 horas y escalan hasta un
+máximo de 7 días. Cambiar de estado HTTP o pasar 30 días sin rechazos reinicia el contador. Una
+sesión del navegador importada y validada, o un chequeo posterior exitoso, limpia el contador.
+Varias cuentas locales que compartan el mismo `--login-username` comparten también el cooldown.
 
 ## Limitación importante de Instagram
 

@@ -42,7 +42,7 @@ def test_gui_version_mode_does_not_open_window(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["seguidores-gui", "--version"])
 
     assert main() == 0
-    assert "seguidores-gui 0.2.5" in capsys.readouterr().out
+    assert "seguidores-gui 0.2.6" in capsys.readouterr().out
 
 
 def test_gui_scheduled_mode_delegates_to_cli(monkeypatch):

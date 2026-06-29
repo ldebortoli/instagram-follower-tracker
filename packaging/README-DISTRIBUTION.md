@@ -1,4 +1,4 @@
-# Seguidores 0.2.5 — paquete autónomo
+# Seguidores 0.2.6 — paquete autónomo
 
 Este paquete incluye Python y las dependencias necesarias. No hace falta instalar Python ni abrir el
 repositorio.
@@ -40,9 +40,10 @@ Como alternativa, **Ingresar sessionid manualmente** acepta el valor de esa cook
 enmascarado, lo valida contra Instagram y recién entonces guarda la sesión local. El `sessionid` debe
 tratarse como una contraseña.
 
-Si Instagram responde `401`, `403` o `429`, se activa un cooldown persistente de 24 horas que
-crece ante rechazos consecutivos hasta un máximo de 7 días. Ni el chequeo manual ni la tarea diaria
-envían requests durante ese período. Importar y validar una sesión activa permite recuperarse.
+Si Instagram responde `429`, los dos primeros rechazos consecutivos esperan 2 horas; desde el
+tercero, 24 horas. Los `401` y `403` conservan una protección de 24 horas que escala hasta 7 días.
+Ni el chequeo manual ni la tarea diaria envían requests durante ese período. Importar y validar una
+sesión activa permite recuperarse.
 
 Con Telegram habilitado, cualquier error de una ejecución programada envía además una alerta
 sanitizada al chat configurado. Si Telegram no está disponible, el fallo de notificación queda en
