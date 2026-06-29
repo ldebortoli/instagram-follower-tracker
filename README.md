@@ -234,6 +234,11 @@ propio usuario. Es una integración no oficial y puede dejar de funcionar, recib
 pedir una verificación adicional cuando Instagram cambie sus endpoints. El colector está aislado del
 resto del programa para poder reemplazarlo sin perder el historial.
 
+Instagram retiró en junio de 2026 la consulta GraphQL que Instaloader 4.15.1 usaba para localizar un
+perfil. Desde la versión 0.2.5, el programa resuelve el perfil mediante `web_profile_info`, sin enviar
+esa consulta obsoleta. Las consultas paginadas de seguidores y seguidos siguen a cargo de
+Instaloader; cualquier rechazo queda registrado y activa el cooldown antes de un nuevo intento.
+
 Usalo sólo con cuentas propias, con una frecuencia razonable y respetando las condiciones de
 Instagram. El cooldown reduce reintentos riesgosos, pero no puede garantizar que Instagram no
 aplique desafíos, bloqueos ni autenticación de dos factores.

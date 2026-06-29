@@ -4,9 +4,12 @@ import json
 import sys
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from functools import partial
 from getpass import getpass
 from pathlib import Path
 from typing import Protocol
+
+import requests
 
 from seguidores.config import AccountConfig
 from seguidores.http_diagnostics import RequestRecorder
@@ -54,9 +57,10 @@ class InstagramCollector:
             loader.load_session_from_file(account.login_username, str(session_file))
             _attach_recorder(loader)
             _require_session_cookie(loader)
-            profile = instaloader.Profile.from_username(loader.context, account.username)
-            followers = {profile.username for profile in profile.get_followers()}
-            following = {profile.username for profile in profile.get_followees()}
+            with _capture_created_sessions(loader):
+                profile = _profile_from_web_info(instaloader, loader, account.username)
+                followers = {profile.username for profile in profile.get_followers()}
+                following = {profile.username for profile in profile.get_followees()}
         except Exception as exc:
             raise self._diagnostic_error(
                 f"Instagram no permitió obtener @{account.username}", exc, loader, account
@@ -83,7 +87,7 @@ class InstagramCollector:
         instaloader = _instaloader()
         loader = _loader(instaloader)
         try:
-            with _capture_login_requests(loader):
+            with _capture_created_sessions(loader):
                 loader.login(account.login_username, password)
         except instaloader.exceptions.TwoFactorAuthRequiredException as exc:
             if not two_factor_code:
@@ -91,7 +95,8 @@ class InstagramCollector:
                     "Instagram solicitó el código de autenticación de dos factores."
                 ) from exc
             try:
-                loader.two_factor_login(two_factor_code.strip())
+                with _capture_created_sessions(loader):
+                    loader.two_factor_login(two_factor_code.strip())
             except Exception as login_exc:
                 raise self._diagnostic_error(
                     "El código de autenticación no fue aceptado",
@@ -167,7 +172,8 @@ class InstagramCollector:
     def _validate_session(self, account: AccountConfig, loader: object) -> None:
         try:
             _require_session_cookie(loader)
-            authenticated_username = loader.test_login()
+            with _capture_created_sessions(loader):
+                authenticated_username = loader.test_login()
         except Exception as exc:
             raise self._diagnostic_error(
                 "Instagram rechazó la sesión", exc, loader, account
@@ -321,9 +327,56 @@ def _attach_recorder(loader: object) -> RequestRecorder:
     return recorder
 
 
+def _profile_from_web_info(instaloader: object, loader: object, username: str) -> object:
+    """Resolve a profile without Instagram's retired GraphQL profile-search query."""
+    normalized_username = username.strip().lstrip("@").casefold()
+    with _web_profile_session(loader, normalized_username) as session:
+        payload = loader.context.get_json(
+            "api/v1/users/web_profile_info/",
+            params={"username": normalized_username},
+            session=session,
+        )
+    data = payload.get("data") if isinstance(payload, dict) else None
+    user = data.get("user") if isinstance(data, dict) else None
+    if not isinstance(user, dict):
+        raise instaloader.exceptions.ProfileNotExistsException(
+            f"Profile {normalized_username} does not exist."
+        )
+    profile = instaloader.Profile(loader.context, user)
+    profile._has_full_metadata = True
+    return profile
+
+
 @contextmanager
-def _capture_login_requests(loader: object):
-    """Attach diagnostics to the temporary Session created by Instaloader.login()."""
+def _web_profile_session(loader: object, username: str):
+    """Copy the authenticated session and configure Instagram's web profile endpoint."""
+    source = loader.context._session
+    session = requests.Session()
+    session.cookies = requests.utils.cookiejar_from_dict(
+        requests.utils.dict_from_cookiejar(source.cookies)
+    )
+    session.headers = source.headers.copy()
+    session.headers.pop("Connection", None)
+    session.headers.pop("Content-Length", None)
+    session.headers.update(
+        {
+            "accept": "*/*",
+            "referer": f"https://www.instagram.com/{username}/",
+            "x-ig-app-id": "936619743392459",
+        }
+    )
+    request_timeout = getattr(loader.context, "request_timeout", None)
+    session.request = partial(session.request, timeout=request_timeout)
+    _attach_recorder(loader).attach(session)
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@contextmanager
+def _capture_created_sessions(loader: object):
+    """Attach diagnostics to every temporary Session created by Instaloader."""
     module = sys.modules.get(loader.context.__class__.__module__)
     requests_module = getattr(module, "requests", None)
     session_factory = getattr(requests_module, "Session", None)

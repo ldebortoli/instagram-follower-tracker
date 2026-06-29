@@ -39,11 +39,11 @@ class HttpExchange:
 class RequestRecorder:
     def __init__(self, maximum: int = 3):
         self.exchanges: deque[HttpExchange] = deque(maxlen=maximum)
-        self._attached_sessions: set[int] = set()
 
     def attach(self, session: Any) -> None:
-        identity = id(session)
-        if identity in self._attached_sessions:
+        marker_name = "_seguidores_http_recorders"
+        attached_recorders = getattr(session, marker_name, set())
+        if id(self) in attached_recorders:
             return
         session.hooks.setdefault("response", []).append(self.capture)
         original_send = session.send
@@ -56,7 +56,7 @@ class RequestRecorder:
                 raise
 
         session.send = traced_send
-        self._attached_sessions.add(identity)
+        setattr(session, marker_name, {*attached_recorders, id(self)})
 
     def capture_request(self, request: Any) -> None:
         self.exchanges.append(_exchange_from_request(request))

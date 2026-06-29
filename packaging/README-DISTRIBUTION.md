@@ -1,4 +1,4 @@
-# Seguidores 0.2.4 — paquete autónomo
+# Seguidores 0.2.5 — paquete autónomo
 
 Este paquete incluye Python y las dependencias necesarias. No hace falta instalar Python ni abrir el
 repositorio.

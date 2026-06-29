@@ -47,9 +47,28 @@ class FakeTwoFactorError(Exception):
     pass
 
 
+class FakeProfileNotExistsError(Exception):
+    pass
+
+
+class FakeProfile:
+    def __init__(self, _context, node):
+        self.username = node["username"]
+        self._has_full_metadata = False
+
+    def get_followers(self):
+        return [SimpleNamespace(username="alice"), SimpleNamespace(username="bob")]
+
+    def get_followees(self):
+        return [SimpleNamespace(username="bob"), SimpleNamespace(username="carol")]
+
+
 class FakeInstaloader:
+    Profile = FakeProfile
+
     class exceptions:
         TwoFactorAuthRequiredException = FakeTwoFactorError
+        ProfileNotExistsException = FakeProfileNotExistsError
 
 
 class FakeLoader:
@@ -101,9 +120,78 @@ class FakeContext:
         self._session = requests.Session()
         self._session.cookies.set("sessionid", "valid-for-test")
         self.username = "owner"
+        self.request_timeout = 30
+        self.web_requests = []
 
     def update_cookies(self, cookies):
         self._session.cookies.update(cookies)
+
+    def get_json(self, path, params, session):
+        self.web_requests.append((path, params, session))
+        return {"data": {"user": {"id": "1", "username": params["username"]}}}
+
+
+class FakeForbiddenContext(FakeContext):
+    def get_json(self, path, params, session):
+        self.web_requests.append((path, params, session))
+        prepared = requests.Request(
+            "GET",
+            f"https://www.instagram.com/{path}",
+            params=params,
+        ).prepare()
+        response = requests.Response()
+        response.status_code = 403
+        response.reason = "Forbidden"
+        response.headers["Content-Type"] = "application/json"
+        response._content = b'{"status":"fail","message":"forbidden"}'
+        response.request = prepared
+        for hook in session.hooks["response"]:
+            hook(response)
+        raise RuntimeError("profile lookup rejected")
+
+
+def test_collect_uses_web_profile_info_instead_of_retired_graphql(tmp_path, monkeypatch):
+    loader = FakeLoader()
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    collector = InstagramCollector(AppPaths(tmp_path))
+    account = AccountConfig("personal", "Target_User", "owner")
+    collector.session_file(account).parent.mkdir(parents=True)
+    collector.session_file(account).touch()
+
+    graph = collector.collect(account)
+
+    assert graph.followers == frozenset({"alice", "bob"})
+    assert graph.following == frozenset({"bob", "carol"})
+    path, params, web_session = loader.context.web_requests[0]
+    assert path == "api/v1/users/web_profile_info/"
+    assert params == {"username": "target_user"}
+    assert web_session is not loader.context._session
+    assert web_session.headers["x-ig-app-id"] == "936619743392459"
+    assert web_session.headers["referer"] == "https://www.instagram.com/target_user/"
+    assert web_session.cookies.get("sessionid") == "valid-for-test"
+
+
+def test_collect_captures_web_profile_403_and_activates_cooldown(tmp_path, monkeypatch):
+    loader = FakeLoader()
+    loader.context = FakeForbiddenContext()
+    monkeypatch.setattr("seguidores.collector._instaloader", lambda: FakeInstaloader)
+    monkeypatch.setattr("seguidores.collector._loader", lambda _module: loader)
+    collector = InstagramCollector(AppPaths(tmp_path))
+    account = AccountConfig("personal", "target", "owner")
+    collector.session_file(account).parent.mkdir(parents=True)
+    collector.session_file(account).touch()
+
+    with pytest.raises(CollectionError) as error:
+        collector.collect(account)
+
+    detail = str(error.value)
+    assert "GET https://www.instagram.com/api/v1/users/web_profile_info/" in detail
+    assert "HTTP 403 Forbidden" in detail
+    assert "Protección activada" in detail
+    cooldown = collector.store.active_cooldown("owner")
+    assert cooldown is not None
+    assert cooldown.status_code == 403
 
 
 def test_login_with_credentials_saves_session_without_password(tmp_path, monkeypatch):
