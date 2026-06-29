@@ -1,7 +1,7 @@
 # Instrucciones de trabajo del repositorio
 
 - Después de cambios que ameriten un nuevo ejecutable, no ejecutes automáticamente PyInstaller ni
-  `packaging/build.py` desde Codex, salvo que el usuario lo pida expresamente.
+  `apps/desktop/packaging/build.py` desde Codex, salvo que el usuario lo pida expresamente.
 - Entregá al usuario este comando para su terminal PowerShell y esperá su resultado:
 
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\build-windows.ps1" -Extract -PushCode`

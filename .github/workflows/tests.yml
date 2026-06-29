@@ -23,4 +23,6 @@ jobs:
           cache: pip
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: pytest --cov=seguidores --cov-report=term-missing
+      - run: >-
+          pytest --cov=seguidores --cov=seguidores_desktop --cov=jo_bot
+          --cov-report=term-missing

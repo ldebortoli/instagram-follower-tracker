@@ -4,6 +4,14 @@ Programa local para registrar seguidores y seguidos de una o varias cuentas de I
 capturas diarias y avisar por popup o Telegram. Funciona por ejecución: el programa termina al
 completar el chequeo y deja la siguiente ejecución al scheduler nativo del sistema.
 
+## Estructura del repositorio
+
+- `apps/desktop`: interfaz gráfica, CLI, schedulers y empaquetado multiplataforma.
+- `apps/jo-bot`: bot de Telegram, configuración local, despliegue y documentación del servidor.
+- `packages/core`: lógica compartida de Instagram, sesiones, cooldown, datos y reportes.
+
+Las dos aplicaciones dependen del núcleo compartido, pero no dependen entre sí.
+
 ## Qué informa
 
 - **No te siguen de vuelta:** cuentas que seguís pero no te siguen.
@@ -169,11 +177,42 @@ con la hora, la cuenta o etapa afectada y un resumen sanitizado. Los chequeos ma
 esta alarma. Si el propio envío a Telegram falla, se registra en `logs/seguidores.log`; no es posible
 avisar por Telegram que Telegram está caído.
 
+Cuando un reporte supera el límite de un mensaje de Telegram, se adjunta completo como
+`seguidores-reporte.txt`. El documento contiene todas las listas de usuarios y el mensaje incluye un
+caption con la cuenta y la fecha del chequeo. Los reportes breves continúan enviándose como texto.
+
 ```bash
 seguidores telegram disable
 seguidores telegram disable --forget-token
 seguidores popup disable
 ```
+
+## Jo Bot: control desde Telegram
+
+Jo Bot es el modo servidor basado en `python-telegram-bot`. Permanece ejecutándose con *long
+polling*, programa el chequeo diario con `JobQueue` y permite configurar cuentas, cargar un
+`sessionid`, iniciar chequeos y cambiar el horario desde un chat privado.
+
+```powershell
+# Preparación única
+python -m pip install -e ".[bot]"
+
+# Iniciar Jo Bot
+jobot
+```
+
+`jobot` carga automáticamente `apps/jo-bot/.env.local`, reutiliza el token guardado en el almacén
+seguro de Windows y permanece activo hasta presionar `Ctrl+C`.
+
+`JO_BOT_ADMIN_USER_IDS` admite cualquier cantidad de IDs separados por coma. Los comandos
+administrativos sólo responden a esos usuarios. `/start`, `/help` y `/debug` son públicos en chats
+privados, grupos y canales.
+`/debug` muestra el `Update` JSON sin notificar al administrador y lo adjunta como `.txt` si resulta
+demasiado largo. Los chequeos manuales responden a quien los solicitó y los automáticos se envían al
+primer ID configurado.
+
+La guía completa para la prueba local y la instalación como servicio en una VM está en
+[apps/jo-bot/docs/GOOGLE-CLOUD.md](apps/jo-bot/docs/GOOGLE-CLOUD.md).
 
 ## Importación oficial de Instagram
 
@@ -250,14 +289,14 @@ aplique desafíos, bloqueos ni autenticación de dos factores.
 ```bash
 python -m pip install -e ".[dev]"
 ruff check .
-pytest --cov=seguidores
+pytest --cov=seguidores --cov=seguidores_desktop --cov=jo_bot
 ```
 
 Para generar el paquete autónomo del sistema actual:
 
 ```bash
 python -m pip install -e ".[build-app]"
-python packaging/build.py
+python apps/desktop/packaging/build.py
 ```
 
 En Windows, el flujo recomendado para construir y probar sin intervención de Codex es:
