@@ -10,21 +10,22 @@ def format_report(
     *,
     max_names_per_section: int | None = MAX_NAMES_PER_SECTION,
 ) -> str:
-    lines = [
+    header = [
         f"Instagram · @{comparison.username}",
         comparison.captured_at.astimezone().strftime("%Y-%m-%d %H:%M %Z"),
-        "",
+    ]
+    summary = [
         f"Seguidores: {len(comparison.followers)}",
         f"Seguidos: {len(comparison.following)}",
         f"No te siguen de vuelta: {len(comparison.not_following_back)}",
         f"No seguís de vuelta: {len(comparison.not_followed_back)}",
     ]
+    sections: list[str] = []
     if comparison.is_baseline:
-        lines.extend(["", "Primera captura guardada como línea de base."])
+        sections.append("Primera captura guardada como línea de base.")
     else:
-        lines.extend(
+        sections.extend(
             [
-                "",
                 _section("Dejaron de seguirte", comparison.lost_followers, max_names_per_section),
                 _section("Empezaron a seguirte", comparison.new_followers, max_names_per_section),
                 _section(
@@ -37,16 +38,15 @@ def format_report(
                 ),
             ]
         )
-    lines.extend(
+    sections.extend(
         [
-            "",
             _section(
                 "No te siguen de vuelta", comparison.not_following_back, max_names_per_section
             ),
             _section("No seguís de vuelta", comparison.not_followed_back, max_names_per_section),
         ]
     )
-    return "\n".join(lines)
+    return "\n\n".join(("\n".join(header), "\n".join(summary), *sections))
 
 
 def format_popup(comparison: Comparison) -> str:
