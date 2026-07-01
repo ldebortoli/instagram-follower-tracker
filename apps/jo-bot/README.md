@@ -1,20 +1,15 @@
 # Jo Bot
 
-Esta carpeta contiene exclusivamente la aplicación de Telegram:
+Bot auxiliar de Telegram. Mantiene `/start`, `/help`, `/debug`, `/account`, `/remove`, `/accounts`
+y `/status`.
 
-- `src/jo_bot`: comandos, permisos, `JobQueue` y arranque.
-- `scripts`: ejecución local en Windows.
-- `deploy`: instalación como servicio `systemd`.
-- `docs`: guía de Google Cloud.
-- `tests`: pruebas específicas del bot.
-
-Jo Bot usa la lógica compartida de `packages/core` y no importa código de `apps/desktop`.
-
-Desde la raíz del repositorio:
+El acceso directo a Instagram, la carga de `sessionid` y los chequeos programados fueron retirados.
+La comparación se realiza cargando los JSON oficiales en la aplicación de escritorio o por CLI.
 
 ```powershell
+python -m pip install -e ".[bot]"
 jobot
 ```
 
-La configuración local privada está en `.env.local` dentro de esta carpeta. El archivo está
-ignorado por Git; `.env.example` documenta sus variables.
+La configuración local se lee desde `apps/jo-bot/.env.local`. `JO_BOT_ADMIN_USER_IDS` admite IDs
+separados por comas. `/start`, `/help` y `/debug` son públicos.

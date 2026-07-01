@@ -32,7 +32,6 @@ class AppPaths:
 
     def ensure(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
-        self.sessions.mkdir(parents=True, exist_ok=True)
         self.logs.mkdir(parents=True, exist_ok=True)
 
 

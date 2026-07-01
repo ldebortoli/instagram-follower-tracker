@@ -3,13 +3,7 @@ from datetime import UTC, datetime
 
 from seguidores.config import NotificationConfig, TelegramConfig
 from seguidores.models import SocialGraph, compare_graphs
-from seguidores.notifier import (
-    TELEGRAM_TEXT_LIMIT,
-    NotificationFailure,
-    notify,
-    notify_automatic_failure,
-    send_telegram,
-)
+from seguidores.notifier import TELEGRAM_TEXT_LIMIT, notify, send_telegram
 
 
 class FakeTelegramResponse:
@@ -95,49 +89,3 @@ def test_telegram_notification_includes_every_account_in_document_report(monkeyp
     assert "… y 25 más" not in sent[0][2]
     assert "Reporte de seguidores de @owner" in sent[0][3]["document_caption"]
     assert "Incluye seguidores, seguidos" in sent[0][3]["document_caption"]
-
-
-def test_automatic_failure_is_sent_to_telegram_without_secrets(monkeypatch):
-    config = NotificationConfig(
-        popup=False,
-        telegram=TelegramConfig(enabled=True, chat_id="@alerts"),
-    )
-    sent = []
-    monkeypatch.setattr("seguidores.notifier.get_telegram_token", lambda: "bot-secret")
-    monkeypatch.setattr(
-        "seguidores.notifier.send_telegram",
-        lambda token, chat_id, message: sent.append((token, chat_id, message)),
-    )
-
-    failure = notify_automatic_failure(
-        [("personal", "HTTP 401 sessionid=account-secret")],
-        config,
-        datetime(2026, 6, 29, 12, tzinfo=UTC),
-    )
-
-    assert failure is None
-    assert sent[0][0:2] == ("bot-secret", "@alerts")
-    assert "ejecución automática fallida" in sent[0][2]
-    assert "HTTP 401" in sent[0][2]
-    assert "account-secret" not in sent[0][2]
-
-
-def test_automatic_failure_records_a_telegram_delivery_error(monkeypatch):
-    config = NotificationConfig(
-        popup=False,
-        telegram=TelegramConfig(enabled=True, chat_id="@alerts"),
-    )
-    monkeypatch.setattr("seguidores.notifier.get_telegram_token", lambda: "bot-secret")
-
-    def fail(*_args):
-        raise RuntimeError("Telegram offline")
-
-    monkeypatch.setattr("seguidores.notifier.send_telegram", fail)
-
-    failure = notify_automatic_failure(
-        [("personal", "Instagram unavailable")],
-        config,
-        datetime(2026, 6, 29, 12, tzinfo=UTC),
-    )
-
-    assert failure == NotificationFailure("telegram", "Telegram offline")

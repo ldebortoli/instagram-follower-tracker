@@ -8,33 +8,48 @@ from seguidores.paths import AppPaths
 def test_config_roundtrip(tmp_path):
     paths = AppPaths(tmp_path)
     config = default_config()
-    config.accounts.append(AccountConfig("personal", "Owner.Name", "Login.Name"))
-    config.schedule.time = "07:30"
+    config.accounts.append(AccountConfig("personal", "Owner.Name"))
 
     save_config(paths, config)
     loaded = load_config(paths)
 
     assert loaded.accounts[0].username == "owner.name"
-    assert loaded.accounts[0].login_username == "login.name"
-    assert loaded.schedule.time == "07:30"
-    assert json.loads(paths.config.read_text(encoding="utf-8"))["schema_version"] == 1
+    assert json.loads(paths.config.read_text(encoding="utf-8"))["schema_version"] == 2
 
 
-@pytest.mark.parametrize("value", ["7:30", "24:00", "09:60", "nueve", "09"])
-def test_invalid_schedule_time_is_rejected(tmp_path, value):
-    config = default_config()
-    config.schedule.time = value
+def test_version_one_config_is_migrated_without_login_or_schedule(tmp_path):
+    paths = AppPaths(tmp_path)
+    paths.config.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "accounts": [
+                    {
+                        "name": "personal",
+                        "username": "Owner",
+                        "login_username": "Login",
+                        "enabled": True,
+                    }
+                ],
+                "notifications": {"popup": False},
+                "schedule": {"enabled": True, "time": "09:00", "backend": "windows"},
+            }
+        ),
+        encoding="utf-8",
+    )
 
-    with pytest.raises(ConfigError):
-        save_config(AppPaths(tmp_path), config)
+    config = load_config(paths)
+    save_config(paths, config)
+    raw = json.loads(paths.config.read_text(encoding="utf-8"))
+
+    assert config.accounts == [AccountConfig("personal", "owner")]
+    assert "schedule" not in raw
+    assert "login_username" not in raw["accounts"][0]
 
 
 def test_duplicate_account_names_are_case_insensitive(tmp_path):
     config = default_config()
-    config.accounts = [
-        AccountConfig("Personal", "one", "one"),
-        AccountConfig("personal", "two", "two"),
-    ]
+    config.accounts = [AccountConfig("Personal", "one"), AccountConfig("personal", "two")]
 
     with pytest.raises(ConfigError, match="repetido"):
         save_config(AppPaths(tmp_path), config)

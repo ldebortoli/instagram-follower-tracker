@@ -9,17 +9,14 @@ import urllib.parse
 import urllib.request
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
 
 from seguidores.config import NotificationConfig
-from seguidores.http_diagnostics import sanitize_text
 from seguidores.models import Comparison
 from seguidores.report import format_popup, format_report
 
 KEYRING_SERVICE = "seguidores-instagram"
 KEYRING_USERNAME = "telegram-bot-token"
 TOKEN_ENVIRONMENT_VARIABLE = "SEGUIDORES_TELEGRAM_BOT_TOKEN"
-AUTOMATIC_ERROR_MESSAGE_LIMIT = 3_800
 TELEGRAM_TEXT_LIMIT = 4_000
 TELEGRAM_REPORT_FILENAME = "seguidores-reporte.txt"
 
@@ -68,41 +65,6 @@ def notify(comparison: Comparison, config: NotificationConfig) -> list[Notificat
         except Exception as exc:
             failures.append(NotificationFailure("telegram", str(exc)))
     return failures
-
-
-def notify_automatic_failure(
-    errors: list[tuple[str, str]],
-    config: NotificationConfig,
-    occurred_at: datetime,
-) -> NotificationFailure | None:
-    if not config.telegram.enabled:
-        return None
-    try:
-        token = get_telegram_token()
-        if not token:
-            raise NotificationError("No hay token para avisar el error de la ejecución automática.")
-        send_telegram(
-            token,
-            config.telegram.chat_id,
-            _format_automatic_failure(errors, occurred_at),
-        )
-    except Exception as exc:
-        return NotificationFailure("telegram", str(exc))
-    return None
-
-
-def _format_automatic_failure(errors: list[tuple[str, str]], occurred_at: datetime) -> str:
-    parts = [
-        "🚨 Seguidores: ejecución automática fallida",
-        f"Hora: {occurred_at.astimezone():%Y-%m-%d %H:%M %Z}",
-    ]
-    for account_name, error in errors:
-        parts.append(f"\nCuenta/etapa: {account_name}\n{sanitize_text(error.strip())}")
-    message = "\n".join(parts)
-    suffix = "\n\nDetalle completo disponible en el log local."
-    if len(message) + len(suffix) > AUTOMATIC_ERROR_MESSAGE_LIMIT:
-        message = message[: AUTOMATIC_ERROR_MESSAGE_LIMIT - len(suffix) - 1] + "…"
-    return message + suffix
 
 
 def send_popup(title: str, message: str) -> None:

@@ -68,8 +68,6 @@ def _build_entry(
         str(BUILD / name),
         "--specpath",
         str(BUILD / "spec"),
-        "--copy-metadata",
-        "instaloader",
     ]
     arguments.append("--onefile" if onefile else "--onedir")
     if windowed:

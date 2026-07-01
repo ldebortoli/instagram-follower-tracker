@@ -4,17 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seguidores-instagram"
-version = "0.3.0"
-description = "Monitor local y multiplataforma de seguidores de Instagram"
+version = "0.4.0"
+description = "Comparador local de exportaciones JSON de seguidores de Instagram"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Lucas De Bortoli" }]
 dependencies = [
-  "browser-cookie3>=0.20.1,<1",
-  "instaloader>=4.14,<5",
   "keyring>=25,<27",
-  "requests>=2.25,<3",
 ]
 
 [project.optional-dependencies]
