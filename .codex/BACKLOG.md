@@ -1,15 +1,14 @@
 # TODO
 
-No hay pedidos locales de integracion pendientes de clasificar. A-041 requiere resolver su bloqueo antes de otro intento de instalacion.
+No hay pedidos locales de integracion pendientes de clasificar. A-041 y E-041 completadas localmente; Q-001 sigue parcial por protecciones remotas no verificadas.
 
 # IN PROGRESS
 
-No hay operaciones de adopcion activas; E-041 termino y A-041 se detuvo con rollback verificado.
+No hay operaciones de adopcion activas. A-041 y E-041 completadas; cierre documental local sin publicar por el limite vigente.
 
 
 # BLOCKED
 
-- [P1][A-041][2026-10-23] Adopcion editable habitual pendiente. Candidato 0.4.1 valido: 138 pruebas, 100% (1230/1230), 12 regresiones y pip check; 41 dependencias conservadas. Native pip habitual se detuvo porque el guard local rechazo una operacion sobre el directorio padre site-packages, no un archivo propio. No fue auto-review y no se reintento ni relajo el guard. Se probo ausencia de payload parcial y se restauraron exactamente los 13 archivos propios: 8507 hashes iguales al baseline, metadata 0.4.0/fuente editable 0.4.1/launcher CLI previo. Minima decision pendiente: revision expresa del tratamiento del mkdir no-op sobre directorio existente, con el resto del alcance intacto. EXE habitual ya es 0.4.1 de forma independiente.
 
 - [P1][Q-001][2026-08-20] Proteccion y privacidad GitHub: avance local parcial, protecciones remotas pendientes. Auditoria estatica acotada anterior de 56 archivos y 214 blobs de hasta 2 MB sin patrones detectados; no prueba ausencia de secretos arbitrarios/ofuscados. Cuenta verificada por lectura autorizada: ldebortoli, ID 18238415. El usuario suministro y autorizo expresamente el noreply exacto; user.email local ya se verifico, con user.name/global sin cambios. Restan Secret Scanning/Push Protection: metadata autorizada no expone su estado y este lote no autoriza modificar ajustes. No inventar estado, reescribir historial, cambiar remotos ni marcar Q-001 DONE. USER_QUEUE conserva su nota historica de procesamiento; este backlog describe el estado actual.
 
@@ -27,3 +26,5 @@ No hay operaciones de adopcion activas; E-041 termino y A-041 se detuvo con roll
 - [2026-10-23][CI-001] Corregir portabilidad de mocks ctypes.windll en dos archivos de pruebas. Cuatro fallos reproducidos con atributo ausente, luego 138 passed sin skips, cobertura 1230/1230 en 19 archivos y Ruff aprobado; sin cambios de produccion. Fix ea049ebf22dbba294791bb652f8dfc0a11a5c2aa verificado en origin/main; run 39977697405 completed/success en una consulta puntual, sin monitoreo posterior.
 
 - [2026-10-23][E-041] Reconstruir y adoptar GUI standalone 0.4.1 bajo autorizacion expresa posterior, sin wrapper ni publicacion externa. PE AMD64, ZIP/checksum y payload GUI-only verificados; las dos rutas habituales y la nueva carpeta release 0.4.1 pasan version/self-test con HOME sintetico y no crean datos. SHA EXE 510f212c63701843e49d6366686cf6b7d2d838483e30a737d3422749d9daeb65. Dos CLI standalone antiguas trasladadas al rollback, ZIP historico intacto. Baseline/backups/rollback.py y recibos en Seguidores-product041-adoption-20261023. No equivale a completar A-041 ni actualizar servicios remotos.
+
+- [2026-10-23][A-041] Completar instalacion editable habitual 0.4.1 tras corregir el falso positivo del guard bajo autorizacion posterior. Candidato con transaccion completa y rollback exacto de 8505 archivos; habitual adoptado una sola vez con wheel SHA 4ccafe51b8b2a30860c82077e3b9c5adc1ab9acfa4f781069e1ac72cd3369a85, 3 launchers correctos, fuente/metadata 0.4.1 y sin CLI obsoleta. Ambos gates: 138 passed, cero skips, cobertura 1230/1230, 12 regresiones y pip check; guard 66 passed/72 sentencias al 100%. Habitual 8506 archivos, 8494 ajenos identicos, 41 dependencias/EXE/candidatos previos preservados; rollback habitual verificado en modo seco. Evidencia en Seguidores-041-final-20261023. No cuentas/datos reales/VPS/CI/publicaciones. Commit documental local pendiente de publicacion por el coordinador.
