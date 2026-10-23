@@ -1,10 +1,10 @@
 # TODO
 
-No hay pedidos de integracion pendientes de clasificar; I-001 esta en IN PROGRESS.
+No hay pedidos locales de integracion pendientes de clasificar.
 
 # IN PROGRESS
 
-- [P1][I-001][2026-10-23] Integrar a main los 19 commits historicos y WIP GUI-only 0.4.1. Alcance e identidad noreply local aprobados; configuracion local verificada sin cambiar nombre/global. Backups y seleccion explicita de 31 entradas en `%LOCALAPPDATA%\Temp\Seguidores-integration-main-20261023`. Candidato aprobado: 138 pruebas sin skips, cobertura 1230/1230 y 12 regresiones de seguridad; pip check correcto. Pendiente commit seleccionado, fast-forward, regresiones sobre resultado integrado y push seguro con comprobacion SHA remoto/CI puntual. No git add --all, tags, releases, EXE ni datos reales.
+No quedan tareas locales iniciadas sin resultado registrado.
 
 # BLOCKED
 
@@ -18,3 +18,5 @@ No hay pedidos de integracion pendientes de clasificar; I-001 esta en IN PROGRES
 - [2026-10-23][T-041] Extender regresiones GUI-only: versiones/metadata 0.4.1, entrada GUI, ausencia de CLI/launcher viejo, packaging y humo con mocks, migracion GUI, texto de notificaciones e aislamiento de red/keyring/procesos/tareas/notificaciones. Validacion del producto instalado en candidato: 138 passed, 0 skipped; cobertura de sentencias 100% y Ruff aprobado. Esto no completa I-001 ni V-001.
 - [2026-10-23][C-041] Instalar el wheel Python 0.4.1 solo en candidato temporal aislado con herramientas de build de fuentes oficiales y hashes verificados; pip check aprobo. No se altero la instalacion habitual del producto ni se construyeron EXE de distribucion.
 - [2026-10-23][V-001] Cerrar cobertura de sentencias 100% (1230/1230, 19 archivos, --cov-fail-under=100) y comprobacion grafica aislada. Suite 138 passed, cero skips; GUI con raiz Tk unica/Toplevel por prueba. No se excluyo codigo ni se modifico produccion para aprobar. Recibos coverage-gate-final-result.json y coverage-completion/coverage-final.json en la raiz temporal.
+
+- [2026-10-23][I-001] Integracion local completa a main de los 19 commits historicos y WIP GUI-only 0.4.1. Commit funcional 527923f353fdf67655abd2667308804ae5c0016e, fast-forward desde 33ef90a y checkout original en main; seleccion explicita de 31 rutas, tres eliminaciones preservadas y sin add --all. Gate posterior: 138 passed sin skips, 1230/1230 sentencias en 19 archivos, 12 regresiones de seguridad y Ruff aprobados. Identidad noreply solo local, nombre/global preservados. Entrega remota autorizada a main del origin verificado; SHA remoto y CI puntual constan en el recibo externo de cierre. Q-001 conserva su bloqueo remoto; no EXE, promociones ni datos reales.

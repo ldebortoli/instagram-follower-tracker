@@ -38,3 +38,12 @@ No borrar decisiones anteriores. Si una decision cambia, agregar una nueva entra
 - Evidencia: autorizacion especifica del usuario transmitida por dot (Sentinel_a09a030c6aac819197b69cdc2e7cc3c6) y confirmacion directa de actualizar cuatro memorias. La escritura documental antes denegada no se ejecuto; solo se presenta un nuevo intento al revisor con esta evidencia.
 - Limites: sin purgar sesiones, tareas, configuracion o datos reales; sin promover producto, construir EXE, publicar releases ni operar VPS. Mantener fixes de dependencias y vendor pip intactos. Protecciones GitHub aun no verificadas; no cambiar permisos ni credenciales.
 - Cierre autorizado: push normal del resultado aprobado al origin verificado, sin force, tags ni wrapper PushCode; comprobar SHA remoto y una vez el estado CI del commit. La politica D-002 sigue vigente para ejecuciones futuras sin pedido explicito de CI.
+
+## D-006 - Integracion local validada y entrega remota acotada
+
+- Estado: implementada para I-001; D-005 conserva los limites de autorizacion.
+- Fecha: 2026-10-23.
+- Resultado: commit funcional 527923f353fdf67655abd2667308804ae5c0016e y fast-forward de main desde 33ef90a7bced71df45af4f464187538af7fcddc7. Integra los 19 commits historicos y WIP 0.4.1 completo, sin conflictos ni descarte de archivos. El cierre documental no cambia codigo.
+- Validacion posterior: snapshot de 42 archivos identico al commit integrado; 138 pruebas sin skips, cobertura de sentencias 1230/1230 en 19 archivos, 12 regresiones de seguridad/compatibilidad y Ruff aprobados. GUI, migracion y limpieza legacy solo con fixtures/mocks; no datos reales ni app/bot real.
+- Identidad: noreply local autorizado, autor y committer comprobados con la identidad canonica de Git. user.name/global no cambiaron; Git normaliza el nombre al crear identidades, por lo que no se compara su valor crudo directamente con el nombre del commit.
+- Entrega: main del origin publico verificado. No tags ni releases; push de main solo activa tests. SHA remoto y CI puntual se registran en el recibo externo de cierre. No hacer monitoreo recurrente ni cambiar credenciales/permisos. Secret Scanning/Push Protection siguen sin evidencia suficiente y Q-001 permanece parcial.

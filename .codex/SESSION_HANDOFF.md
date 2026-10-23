@@ -2,7 +2,7 @@
 
 ## Objetivo y alcance actual
 
-Integracion local completa hacia main de los 19 commits historicos y WIP GUI-only 0.4.1, expresamente aceptada por el usuario. Identidad noreply exacta local y actualizacion de estas cuatro memorias autorizadas; configuracion local verificada, global/nombre sin cambios. Falta commit seleccionado, fast-forward, validacion posterior y push seguro autorizado. No ejecutar EXE, publicaciones, bot/app real, cuentas ni VPS; no purgar datos/sesiones/tareas/config reales ni modificar memorias globales o protecciones remotas.
+Integracion local a main completada y validada: 19 commits historicos mas el WIP GUI-only 0.4.1, expresamente aceptados por el usuario. Commit funcional 527923f353fdf67655abd2667308804ae5c0016e; identidad noreply solo local y cuatro memorias autorizadas, global/nombre preservados. Entrega remota autorizada a main del origin publico verificado; resultado SHA/CI puntual en recibo externo de cierre. No ejecutar EXE, publicaciones, bot/app real, cuentas ni VPS; no purgar datos/sesiones/tareas/config reales ni modificar memorias globales o protecciones remotas.
 
 ## Estado verificado (2026-10-23)
 
@@ -18,7 +18,7 @@ Integracion local completa hacia main de los 19 commits historicos y WIP GUI-onl
 - Se probo una mutacion exclusivamente en la entrada GUI del candidato: la regresion fallo como se esperaba; el archivo se restauro byte por byte y la prueba volvio a aprobar. Recibos `mutation-restoration.json`, `restored-gui-entry-result.json` y `candidate-validation.json` (20 archivos del payload del wheel y tres launchers verificados).
 - Q-002 DONE. Q-001 parcial/bloqueado: lectura autorizada verifico cuenta y repositorio publico con default branch main; no expuso Secret Scanning/Push Protection ni verifico noreply exacto. No se escribieron ajustes/configuracion.
 
-## Integracion pendiente
+## Referencias historicas antes de integrar
 
 - Fetch normal de origin verificado termino una sola vez el 2026-10-23 a las 02:00:48 UTC mediante revision aprobada de la escritura protegida FETCH_HEAD. No repetir a ciegas.
 - main/origin/main: `33ef90a7bced71df45af4f464187538af7fcddc7`.
@@ -44,7 +44,7 @@ Integracion local completa hacia main de los 19 commits historicos y WIP GUI-onl
 - main es el destino canonico respaldado por HEAD remoto vivo y por ser ancestro sin commits exclusivos. El coordinador debe aceptar los efectos funcionales adicionales; no se asume que GUI-only autorice cualquier cambio historico. Si acepta, el fast-forward debe incluir primero el WIP 0.4.1 seleccionado, no apuntar solamente al tip comprometido 0.4.0.
 - Riesgos pendientes del analisis: una futura ejecucion real puede limpiar schedulers/sesiones antiguas; no se actualizo servicio remoto ni EXE. Quedan texto obsoleto de seguidores init en config y extra job-queue para otro alcance; no se modificaron para maquillar cobertura ni se cambiaron paquetes.
 
-## Actualizacion vigente de integracion (2026-10-23)
+## Preparacion previa al commit (2026-10-23)
 
 - El hold funcional anterior fue levantado por el usuario: integrar todo, incluyendo los 19 commits y WIP 0.4.1. Las referencias historicas de este documento a aceptacion pendiente quedan superadas. No se autoriza limpieza legacy real.
 - La identidad faltante fue resuelta por autorizacion especifica de noreply local transmitida por dot; se verifico sin cambiar identidad global o user.name. La confirmacion directa del usuario tambien autoriza las cuatro memorias. El primer intento documental fue denegado antes de iniciar; este es el unico nuevo intento bajo evidencia posterior.
@@ -53,3 +53,14 @@ Integracion local completa hacia main de los 19 commits historicos y WIP GUI-onl
 - Nuevo candidato separado: producto 0.4.1, 42 distribuciones y 41 bibliotecas conservadas. Suite 138 passed, cero skips, 100% de sentencias (1230/1230, 19 archivos, cero exclusiones), otras 12 pruebas de seguridad/compatibilidad, pip check, 20 archivos del wheel y tres launchers aprobados. Se valido el arbol propuesto; repetir gate sobre resultado integrado.
 - Habitual y cuatro candidatos previos se preservaron por hashes. Seguridad adoptada: pip 26.2.2, certifi 2026.10.19, anyio 4.14.2 y urllib3 independiente 2.8.0. Vendor urllib3 de pip queda 2.7.0 para actualizacion oficial futura. Producto habitual 0.4.0 y cuatro EXE siguen sin actualizar.
 - Despues de validar main, el usuario solicita subir los cambios aprobados al repositorio correspondiente. Verificar origin/audiencia, diff sin datos privados, ausencia de triggers de publicacion y SHA remoto; push sin force ni tags. Se solicita una comprobacion CI puntual; no monitoreo recurrente. No usar script PushCode/git add --all.
+
+## Cierre local validado (2026-10-23)
+
+- I-001 DONE: commit funcional 527923f353fdf67655abd2667308804ae5c0016e sobre 2b5f77c. Incluye las 31 rutas WIP/docs/tests seleccionadas y sus tres eliminaciones. Se hizo git merge --ff-only codex/gui-setup desde un checkout temporal de main; main avanzo desde 33ef90a al commit funcional, con los 19 commits historicos. No se creo merge commit adicional ni se forzaron refs.
+- El checkout temporal limpio se retiro con git worktree remove, sin force. El checkout original se cambio a main con el mismo arbol; los 62 archivos conservaron sus bytes aprobados. Este cierre posterior modifica solo las cuatro memorias autorizadas y se registra en un commit documental separado.
+- Pruebas posteriores al merge: 138 passed, cero skips, cobertura 100% (1230/1230, 19 archivos y cero exclusiones), otras 12 pruebas de seguridad/compatibilidad y Ruff aprobados. Los 42 archivos de fuente/tests/recursos del snapshot coinciden por hash con el commit integrado. Recibos coverage-integrated-main y security-integrated-main en la raiz temporal de integracion.
+- Identidad local autorizada y verificada para autor/committer; configuracion global y user.name intactos. Un assert inicial comparo nombre crudo configurado con el nombre normalizado por Git y fallo; la lectura de git var verifico que el nombre canonico era el correcto. No se cambio ni invento identidad, no se repitio commit. La creacion del checkout temporal ya habia ocurrido una sola vez y fue conciliada antes de ejecutar merge.
+- La denegacion documental inicial quedo preservada. Tras evidencia nueva expresa del usuario, el unico nuevo intento documental fue aprobado y se actualizaron las cuatro memorias; no se uso otra ruta ante la denegacion. USER_QUEUE permanece byte por byte como se recibio en el preflight de integracion.
+- Publicacion de codigo: origin verificado https://github.com/ldebortoli/instagram-follower-tracker.git, audiencia publica, destino main. El usuario autorizo subir el cierre; push sin force, tags, releases ni credenciales nuevas. Workflow tests corre en push; packaging/publicacion requiere PR, ejecucion manual o tag v*, y release exige tag. Resultado efectivo y SHA remoto: `%LOCALAPPDATA%\Temp\Seguidores-integration-main-20261023\memory-confirmation-20261023\remote-delivery.json`. Consulta CI puntual solicitada para este cierre; sin monitoreo recurrente.
+- Rollback y preservacion: backup original de 62 archivos/indice, parches y bundle completo; backup adicional de cuatro memorias antes de cada fase. Los cambios de producto, pruebas y USER_QUEUE fuera de esas cuatro memorias se preservan por hash. Ver recibo final de preservacion antes de otras mutaciones. No restaurar masivamente ni hacer reset --hard sobre cambios futuros.
+- Producto habitual conserva metadata 0.4.0; candidatos previos y cuatro EXE no se actualizaron. Permanecen fixes pip/certifi/anyio/urllib3 adoptados y vendor urllib3 de pip 2.7.0 como remanente. No se ejecutaron cuentas, apps/bot real, scheduler, notificaciones reales, purgas legacy ni VPS. Q-001 sigue parcial por protecciones remotas no verificadas.
