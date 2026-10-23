@@ -50,7 +50,7 @@ def notify(comparison: Comparison, config: NotificationConfig) -> list[Notificat
             token = get_telegram_token()
             if not token:
                 raise NotificationError(
-                    "No hay token. Ejecutá 'seguidores telegram configure --chat-id ...'."
+                    "No hay token de Telegram. Configuralo desde la pestaña Notificaciones."
                 )
             send_telegram(
                 token,

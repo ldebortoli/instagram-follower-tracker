@@ -32,34 +32,6 @@ El archivo `followers.json` usado como ejemplo en este desarrollo contiene la cl
 Instagram necesitás el archivo que normalmente se llama `followers_1.json` y contiene
 `relationships_followers` o una lista de relaciones con enlaces a `instagram.com`.
 
-## Consola
-
-```powershell
-seguidores init
-seguidores account add personal --username MI_USUARIO
-seguidores import-json personal `
-  --followers "C:\ruta\followers_1.json" `
-  --following "C:\ruta\following.json"
-```
-
-Si Instagram dividió los seguidores:
-
-```powershell
-seguidores import-json personal `
-  --followers followers_1.json followers_2.json `
-  --following following.json
-```
-
-Otros comandos:
-
-```powershell
-seguidores history personal --limit 30
-seguidores telegram configure --chat-id @mi_canal
-seguidores telegram test
-seguidores popup disable
-seguidores config show
-```
-
 ## Migración desde 0.3.x
 
 Al abrir la GUI 0.4.0 por primera vez, la aplicación:
@@ -68,12 +40,6 @@ Al abrir la GUI 0.4.0 por primera vez, la aplicación:
 - descarta los campos antiguos de sesión y automatización;
 - elimina las sesiones locales guardadas;
 - intenta quitar la tarea diaria antigua del sistema.
-
-Si hiciera falta repetir esa limpieza manualmente:
-
-```powershell
-seguidores cleanup-legacy
-```
 
 ## Instalación desde el código
 
@@ -91,8 +57,7 @@ En macOS/Linux, activá el entorno con `source .venv/bin/activate`.
 ## Jo Bot
 
 Jo Bot mantiene `/start`, `/help`, `/debug` y la administración básica de perfiles. Ya no acepta
-`sessionid`, no ejecuta chequeos y no programa tareas. La comparación de JSON se hace en la GUI o
-por consola.
+`sessionid`, no ejecuta chequeos y no programa tareas. La comparación de JSON se hace en la GUI.
 
 ```powershell
 python -m pip install -e ".[bot]"

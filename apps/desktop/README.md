@@ -1,6 +1,6 @@
 # Aplicaciones de escritorio
 
-- `src/seguidores_desktop`: GUI y CLI para importar exportaciones JSON.
+- `src/seguidores_desktop`: GUI para importar exportaciones JSON.
 - `packaging`: entradas y armado de ejecutables con PyInstaller.
 - `scripts`: automatización del build de Windows.
 - `tests`: pruebas específicas de escritorio.
@@ -9,7 +9,6 @@ Desde la raíz:
 
 ```powershell
 seguidores-gui
-seguidores import-json --help
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\build-windows.ps1" -Extract -PushCode
 ```
 

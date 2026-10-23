@@ -1,28 +1,55 @@
-﻿# Session handoff
+# Session handoff
 
-## Objetivo general
+## Objetivo y alcance actual
 
-Aplicacion local multiplataforma para comparar exportaciones JSON oficiales de seguidores y seguidos, mantener historial SQLite y ofrecer GUI y Jo Bot.
+Integracion local completa hacia main de los 19 commits historicos y WIP GUI-only 0.4.1, expresamente aceptada por el usuario. Identidad noreply exacta local y actualizacion de estas cuatro memorias autorizadas; configuracion local verificada, global/nombre sin cambios. Falta commit seleccionado, fast-forward, validacion posterior y push seguro autorizado. No ejecutar EXE, publicaciones, bot/app real, cuentas ni VPS; no purgar datos/sesiones/tareas/config reales ni modificar memorias globales o protecciones remotas.
 
-## Tarea actual
+## Estado verificado (2026-10-23)
 
-No hay una tarea activa registrada.
+- Reconciliacion tras error de capacidad: se comprobaron backups, candidato y recibos existentes antes de continuar. No se repitieron fetch ni instalaciones ya terminadas.
+- Backup antes de editar: `%LOCALAPPDATA%\Temp\Seguidores-gui041-20261023\backup-before-edits`, con hashes en `backup-manifest.json`. Se preservan las versiones originales del WIP y de cada archivo editado.
+- Cambios nuevos: cinco memorias del proyecto; `conftest.py`; tests de GUI, packaging, entrada GUI, metadata/CLI, notificaciones y corutinas puras del bot. No se edito codigo de produccion adicional al WIP recibido.
+- Los 15 WIP originales eran 12 modificaciones y 3 eliminaciones, todos unstaged. El lote extiende expresamente test_gui y procesa USER_QUEUE; los otros diez archivos modificados de ese WIP y las tres eliminaciones se preservan. Su autor no puede atribuirse solo por estar sin commit.
+- Candidato: `%LOCALAPPDATA%\Temp\Seguidores-gui041-20261023\venv`, Python 3.13.2. Producto instalado 0.4.1; wheel SHA-256 `1800c273a9a7e1168f0a0c1ddac404ec6b12f5f33edb0edb125c0f4526c940c2`. Pip check aprobo. No se promovio a `.venv-build`, cuyo producto sigue 0.4.0.
+- Se descargaron una vez cuatro wheels oficiales de herramientas de build, verificados por hashes, y se instalaron offline solo en candidato. No se instalo PyInstaller ni se ejecutaron builders de ejecutables. Los launchers de instalacion del wheel pertenecen solo al candidato.
+- Suite final sobre producto instalado: 138 passed, 0 skipped en 4.81 s; Ruff aprobado. Recibo `coverage-gate-final-result.json` y log en raiz temporal. La comprobacion GUI incluye tres pestanas, perfiles e importacion de uno y dos JSON sinteticos.
+- Cobertura final de sentencias: 1230/1230 (100%), con --cov-fail-under=100. Mismos 19 archivos y denominador, sin exclusiones o pragmas nuevos; ramas no medidas. Recibo `coverage-completion/coverage-final.json`. La puerta de cobertura ya esta satisfecha; no implica autorizacion de merge ni validacion EXE/VPS.
+- Incidente de pruebas: primer intento completo cancelado sin resultado; reproduccion limitada a 90 s genero trace en el socketpair interno de Windows usado por asyncio.run. Se adapto solo el test unitario para evaluar corutinas puras y fallar ante suspension inesperada; la suite posterior aprobo. No se cambiaron red, permisos ni controles.
+- Se probo una mutacion exclusivamente en la entrada GUI del candidato: la regresion fallo como se esperaba; el archivo se restauro byte por byte y la prueba volvio a aprobar. Recibos `mutation-restoration.json`, `restored-gui-entry-result.json` y `candidate-validation.json` (20 archivos del payload del wheel y tres launchers verificados).
+- Q-002 DONE. Q-001 parcial/bloqueado: lectura autorizada verifico cuenta y repositorio publico con default branch main; no expuso Secret Scanning/Push Protection ni verifico noreply exacto. No se escribieron ajustes/configuracion.
 
-## Estado actual
+## Integracion pendiente
 
-- Memoria persistente inicializada el 2026-07-10.
-- Rama detectada: `codex/gui-setup`.
-- Remoto origin: `https://github.com/ldebortoli/instagram-follower-tracker.git`.
-- Antes de trabajar, reconciliar este archivo con el repositorio y los procesos reales.
+- Fetch normal de origin verificado termino una sola vez el 2026-10-23 a las 02:00:48 UTC mediante revision aprobada de la escritura protegida FETCH_HEAD. No repetir a ciegas.
+- main/origin/main: `33ef90a7bced71df45af4f464187538af7fcddc7`.
+- codex/gui-setup/origin/codex/gui-setup/HEAD: `2b5f77ccacba7cf1052cb2b13ee37c65d893b7d2`.
+- main es ancestro: 0/19 commits; esos 19 afectan 66 archivos. Propuesta: confirmar integracion de codex/gui-setup hacia main (posible fast-forward tras los commits seleccionados y aprobados). Integrar main hacia la rama actual seria no-op. No se ejecuto ningun merge/commit ni se preparo el indice.
+- Pendientes actuales en BACKLOG: I-001 IN PROGRESS para commit/fast-forward/push del conjunto ya aprobado y Q-001 BLOCKED solo en protecciones remotas. Noreply local ya autorizado/configurado; V-001 DONE, con gate tambien aprobado en el nuevo candidato.
 
-## Proximos pasos
+## Preservacion y restricciones
 
-1. Leer los cinco archivos de `.codex/`.
-2. Revisar README, estructura y estado Git.
-3. Completar CONTEXT.md si falta informacion estable.
-4. Procesar USER_QUEUE.md y continuar desde BACKLOG.md.
+- Conservar HEAD, indice, WIP ajeno, instalacion habitual y cuatro EXE previos. Consultar recibo final de preservacion en la raiz temporal antes de nuevas escrituras.
+- No repetir la lectura CIM denegada por otra ruta; la exclusividad para el lote previo fue confirmada por el usuario. El coordinador excluye escritores simultaneos en este proyecto.
+- Lote pip/certifi terminado: rollback verificable en `%LOCALAPPDATA%\Temp\Seguidores-deps-lot1-20261022\promotion-20261023\rollback-payload`. No volver a promover paquetes por esta tarea.
+- Los tres rmdir bloqueados sobre Scripts durante aquel lote fueron eventos internos de una unica instalacion de pip, no tres comandos explicitos de Codex ni intentos posteriores a una denegacion del revisor. El recibo no tiene stack/timestamp individual por evento: la asociacion exacta con cada launcher es una inferencia del codigo de pip. Launchers, payloads y paquetes se comprobaron despues. No reintentar esas eliminaciones.
 
-## Riesgos
+## Cierre de cobertura y revision historica
 
-- La inicializacion automatica no sustituye la inspeccion tecnica del proyecto.
-- Preservar cambios locales que no pertenezcan a la tarea activa.
+- Antes de ampliar pruebas se concilio el recibo final previo y se respaldaron 12 archivos actuales en `coverage-completion/backup`, con hashes en `coverage-completion/baseline.json`. Los 19 backups originales permanecen en backup-before-edits.
+- Se agregaron seis archivos de pruebas: core/test_edge_cases, core/test_notification_adapters, desktop/test_gui_actions, desktop/test_legacy_cleanup, desktop/test_packaging_entry y jo-bot/test_bot_actions. Solo se ajusto ademas la fixture de test_gui; no cambio codigo de produccion, paquetes ni instalacion habitual.
+- El fallo grafico anterior fue intermitente al recrear Tk por prueba: Tcl informaba que no podia leer button.tcl o ttk/ttk.tcl, aunque la consulta de existencia encontro los archivos del runtime. No se reparo/copio/modifico Python/Tk global ni se cambio de ruta. Con una unica raiz Tk por proceso y Toplevel aislado por prueba, la suite final aprobo sin skips. Se preservaron los logs iniciales; no se los considero aprobados.
+- Las unidades de adaptadores externos usan solo respuestas/canales falsos y HOME temporal. El pipeline de packaging usa PyInstaller falso y un archivo de texto sintetico con nombre .exe dentro de tmp; no compila ni ejecuta binarios. Los entry guards se prueban con el texto de fuente intacto, recursos de fixture y mocks; no se reescribe codigo para sumar cobertura.
+- Una mutacion temporal del candidato que aceptaba ID administrador cero fue detectada por la regresion; se restauro el archivo byte por byte. Recibo `coverage-completion/mutation-restoration.json`. No se uso ninguna cuenta/ID real para ese caso.
+- Consulta publica ls-remote de lectura (sin autenticacion, cambios de refs locales ni config) confirma HEAD remoto main y ambas ramas en los mismos hashes. Revision real de los 19 parches, historia y codigo: `coverage-completion/integration-review.md`. El conjunto incluye un cambio de producto de main 0.1.0 a importacion exclusiva de JSON, eliminacion de CLI/scheduler/acceso directo, migracion config v2 y limpieza legacy, ademas de monorepo, Jo Bot y workflows de distribucion.
+- main es el destino canonico respaldado por HEAD remoto vivo y por ser ancestro sin commits exclusivos. El coordinador debe aceptar los efectos funcionales adicionales; no se asume que GUI-only autorice cualquier cambio historico. Si acepta, el fast-forward debe incluir primero el WIP 0.4.1 seleccionado, no apuntar solamente al tip comprometido 0.4.0.
+- Riesgos pendientes del analisis: una futura ejecucion real puede limpiar schedulers/sesiones antiguas; no se actualizo servicio remoto ni EXE. Quedan texto obsoleto de seguidores init en config y extra job-queue para otro alcance; no se modificaron para maquillar cobertura ni se cambiaron paquetes.
+
+## Actualizacion vigente de integracion (2026-10-23)
+
+- El hold funcional anterior fue levantado por el usuario: integrar todo, incluyendo los 19 commits y WIP 0.4.1. Las referencias historicas de este documento a aceptacion pendiente quedan superadas. No se autoriza limpieza legacy real.
+- La identidad faltante fue resuelta por autorizacion especifica de noreply local transmitida por dot; se verifico sin cambiar identidad global o user.name. La confirmacion directa del usuario tambien autoriza las cuatro memorias. El primer intento documental fue denegado antes de iniciar; este es el unico nuevo intento bajo evidencia posterior.
+- Revalidacion: 62 hashes del proyecto, tres eliminaciones, indice y refs sin deriva ni writers adicionales conocidos. No hubo inspeccion CIM ni alternativa de procesos. Backups originales y nuevos de cuatro memorias, bundle completo y recibos en `%LOCALAPPDATA%\Temp\Seguidores-integration-main-20261023`.
+- main/origin/main siguen 33ef90a7bced71df45af4f464187538af7fcddc7; codex/gui-setup/origin/codex/gui-setup/HEAD siguen 2b5f77ccacba7cf1052cb2b13ee37c65d893b7d2 antes del commit. main es ancestro, 0/19. Seleccion explicita de 31 entradas; aun no hay commit/merge.
+- Nuevo candidato separado: producto 0.4.1, 42 distribuciones y 41 bibliotecas conservadas. Suite 138 passed, cero skips, 100% de sentencias (1230/1230, 19 archivos, cero exclusiones), otras 12 pruebas de seguridad/compatibilidad, pip check, 20 archivos del wheel y tres launchers aprobados. Se valido el arbol propuesto; repetir gate sobre resultado integrado.
+- Habitual y cuatro candidatos previos se preservaron por hashes. Seguridad adoptada: pip 26.2.2, certifi 2026.10.19, anyio 4.14.2 y urllib3 independiente 2.8.0. Vendor urllib3 de pip queda 2.7.0 para actualizacion oficial futura. Producto habitual 0.4.0 y cuatro EXE siguen sin actualizar.
+- Despues de validar main, el usuario solicita subir los cambios aprobados al repositorio correspondiente. Verificar origin/audiencia, diff sin datos privados, ausencia de triggers de publicacion y SHA remoto; push sin force ni tags. Se solicita una comprobacion CI puntual; no monitoreo recurrente. No usar script PushCode/git add --all.

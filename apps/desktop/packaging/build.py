@@ -22,9 +22,7 @@ def main() -> int:
     architecture = _architecture(platform.machine())
     _reset_outputs()
 
-    console_name = "seguidores-cli" if system == "Darwin" else "seguidores"
     gui_name = "Seguidores" if system == "Darwin" else "seguidores-gui"
-    _build_entry(DESKTOP_ROOT / "packaging" / "console_entry.py", console_name)
     _build_entry(
         DESKTOP_ROOT / "packaging" / "gui_entry.py",
         gui_name,
@@ -32,10 +30,9 @@ def main() -> int:
         onefile=system != "Darwin",
     )
 
-    console = _console_path(console_name, system)
     gui = _gui_path(gui_name, system)
-    _smoke_test(console, gui)
-    archive = _package(system, architecture, console, gui)
+    _smoke_test(gui)
+    archive = _package(system, architecture, gui)
     checksum = _write_checksum(archive)
     print(f"Paquete: {archive}")
     print(f"SHA-256: {checksum}")
@@ -77,11 +74,6 @@ def _build_entry(
     PyInstaller.__main__.run(arguments)
 
 
-def _console_path(name: str, system: str) -> Path:
-    suffix = ".exe" if system == "Windows" else ""
-    return DIST / f"{name}{suffix}"
-
-
 def _gui_path(name: str, system: str) -> Path:
     if system == "Darwin":
         return DIST / f"{name}.app"
@@ -89,29 +81,8 @@ def _gui_path(name: str, system: str) -> Path:
     return DIST / f"{name}{suffix}"
 
 
-def _smoke_test(console: Path, gui: Path) -> None:
+def _smoke_test(gui: Path) -> None:
     environment = {**os.environ, "SEGUIDORES_HOME": str(BUILD / "smoke-home")}
-    console_result = subprocess.run(
-        [str(console), "--version"],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        env=environment,
-    )
-    if __version__ not in console_result.stdout:
-        raise RuntimeError("El ejecutable de consola no informó la versión esperada.")
-    self_test = subprocess.run(
-        [str(console), "--packaging-self-test"],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        env=environment,
-    )
-    if "packaging-self-test: ok" not in self_test.stdout:
-        raise RuntimeError("El ejecutable no superó la prueba de dependencias incluidas.")
-
     gui_executable = gui
     if platform.system() == "Darwin":
         gui_executable = gui / "Contents" / "MacOS" / gui.stem
@@ -123,16 +94,23 @@ def _smoke_test(console: Path, gui: Path) -> None:
         timeout=60,
         env=environment,
     )
+    subprocess.run(
+        [str(gui_executable), "--packaging-self-test"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=environment,
+    )
 
 
-def _package(system: str, architecture: str, console: Path, gui: Path) -> Path:
+def _package(system: str, architecture: str, gui: Path) -> Path:
     os_name = {"Windows": "Windows", "Darwin": "macOS", "Linux": "Linux"}.get(system, system)
     package_name = f"Seguidores-{__version__}-{os_name}-{architecture}"
     stage = BUILD / "package" / package_name
     stage.mkdir(parents=True, exist_ok=True)
     shutil.copy2(PACKAGE_README, stage / "LEEME.md")
     shutil.copy2(ROOT / "LICENSE", stage / "LICENSE")
-    shutil.copy2(console, stage / console.name)
     if gui.is_dir():
         shutil.copytree(gui, stage / gui.name, symlinks=True)
         subprocess.run(

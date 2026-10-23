@@ -4,7 +4,7 @@ Bot auxiliar de Telegram. Mantiene `/start`, `/help`, `/debug`, `/account`, `/re
 y `/status`.
 
 El acceso directo a Instagram, la carga de `sessionid` y los chequeos programados fueron retirados.
-La comparación se realiza cargando los JSON oficiales en la aplicación de escritorio o por CLI.
+La comparación se realiza cargando los JSON oficiales en la aplicación de escritorio.
 
 ```powershell
 python -m pip install -e ".[bot]"

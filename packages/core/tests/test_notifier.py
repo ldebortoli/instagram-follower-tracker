@@ -89,3 +89,24 @@ def test_telegram_notification_includes_every_account_in_document_report(monkeyp
     assert "… y 25 más" not in sent[0][2]
     assert "Reporte de seguidores de @owner" in sent[0][3]["document_caption"]
     assert "Incluye seguidores, seguidos" in sent[0][3]["document_caption"]
+
+
+def test_missing_telegram_token_points_to_gui_notifications(monkeypatch):
+    comparison = compare_graphs(
+        account_name="synthetic",
+        username="fixture",
+        current=SocialGraph.from_iterables(["alice"], ["bob"]),
+        previous=None,
+        captured_at=datetime(2026, 6, 29, 12, tzinfo=UTC),
+    )
+    config = NotificationConfig(
+        popup=False, telegram=TelegramConfig(enabled=True, chat_id="@synthetic")
+    )
+    monkeypatch.setattr("seguidores.notifier.get_telegram_token", lambda: None)
+
+    failures = notify(comparison, config)
+
+    assert len(failures) == 1
+    assert failures[0].channel == "telegram"
+    assert "pestaña Notificaciones" in failures[0].error
+    assert "seguidores telegram configure" not in failures[0].error

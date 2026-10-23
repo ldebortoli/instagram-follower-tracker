@@ -1,10 +1,10 @@
-import asyncio
 import os
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from zoneinfo import ZoneInfo
 
+import pytest
 from jo_bot.app import (
     ADMIN_USER_ID_ENVIRONMENT_VARIABLE,
     ADMIN_USER_IDS_ENVIRONMENT_VARIABLE,
@@ -16,6 +16,32 @@ from jo_bot.app import (
 )
 from seguidores.paths import AppPaths
 from telegram import Chat, Message, Update, User
+
+
+def run_without_io(coroutine):
+    """Evaluate pure coroutine units; fail if they require an event loop or IO."""
+    try:
+        try:
+            coroutine.send(None)
+        except StopIteration as completed:
+            return completed.value
+        raise AssertionError(
+            "Unit coroutine unexpectedly suspended; replace IO with a test double."
+        )
+    finally:
+        coroutine.close()
+
+
+def test_pure_coroutine_runner_rejects_unmocked_suspension():
+    class Suspends:
+        def __await__(self):
+            yield "unexpected IO"
+
+    async def unexpected_io():
+        await Suspends()
+
+    with pytest.raises(AssertionError, match="unexpectedly suspended"):
+        run_without_io(unexpected_io())
 
 
 def controller(tmp_path, admin_user_ids=(267832653,)):
@@ -73,7 +99,7 @@ def test_every_configured_user_is_authorized(tmp_path):
         effective_message=SimpleNamespace(reply_text=AsyncMock()),
     )
 
-    assert asyncio.run(bot._authorized(update)) is True
+    assert run_without_io(bot._authorized(update)) is True
 
 
 def test_debug_is_public_in_groups(tmp_path):
@@ -90,7 +116,7 @@ def test_debug_is_public_in_groups(tmp_path):
     )
     update = Update(update_id=10, message=message)
 
-    asyncio.run(bot.debug_command(update, SimpleNamespace(bot=telegram_bot)))
+    run_without_io(bot.debug_command(update, SimpleNamespace(bot=telegram_bot)))
 
     call = telegram_bot.send_message.await_args.kwargs
     assert call["chat_id"] == -100123456789
@@ -100,7 +126,7 @@ def test_debug_is_public_in_groups(tmp_path):
 def test_long_bot_message_is_attached_as_text_document():
     telegram_bot = SimpleNamespace(send_message=AsyncMock(), send_document=AsyncMock())
 
-    asyncio.run(
+    run_without_io(
         _send_text_or_document(
             telegram_bot, 267832653, "x" * 4001, "reporte.txt", caption="Detalle"
         )

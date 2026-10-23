@@ -2,9 +2,9 @@
 
 ## Abrir
 
-- Windows: doble clic en `seguidores-gui.exe`; `seguidores.exe` ofrece la consola.
-- macOS: abrí `Seguidores.app`; `seguidores-cli` ofrece la consola.
-- Linux: ejecutá `./seguidores-gui` o `./seguidores`.
+- Windows: doble clic en `seguidores-gui.exe`.
+- macOS: abrí `Seguidores.app`.
+- Linux: ejecutá `./seguidores-gui`.
 
 ## Importar
 
