@@ -11,6 +11,11 @@ from seguidores.paths import AppPaths
 from seguidores_desktop import gui
 
 
+@pytest.fixture(autouse=True)
+def no_native_windows_loader(monkeypatch):
+    monkeypatch.delattr(gui.ctypes, "windll", raising=False)
+
+
 class Value:
     def __init__(self, value=""):
         self.value = value
@@ -172,9 +177,14 @@ def test_close_respects_busy_confirmation_without_real_dialog(app, monkeypatch):
 def test_main_paths_logging_and_tk_errors_use_only_fakes(tmp_path, monkeypatch, capsys):
     paths = AppPaths(tmp_path)
     monkeypatch.setattr(sys, "argv", ["gui-fixture"])
+    monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(gui, "app_paths", lambda: paths)
+    dpi_awareness = Mock()
     monkeypatch.setattr(
-        gui.ctypes, "windll", SimpleNamespace(shcore=SimpleNamespace(SetProcessDpiAwareness=Mock()))
+        gui.ctypes,
+        "windll",
+        SimpleNamespace(shcore=SimpleNamespace(SetProcessDpiAwareness=dpi_awareness)),
+        raising=False,
     )
     logger = Mock(handlers=[])
     handler = Mock()
@@ -198,6 +208,8 @@ def test_main_paths_logging_and_tk_errors_use_only_fakes(tmp_path, monkeypatch, 
     assert gui.main(paths) == 0
     construct.assert_called_once_with(root, paths)
     root.mainloop.assert_called_once()
+    assert dpi_awareness.call_count == 2
+    dpi_awareness.assert_called_with(1)
 
 
 def test_direct_gui_module_version_entry_does_not_open_window(monkeypatch):

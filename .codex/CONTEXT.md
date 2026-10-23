@@ -13,7 +13,7 @@ Aplicacion local multiplataforma para comparar exportaciones JSON oficiales de s
 - `apps/jo-bot/src/jo_bot`: bot independiente; conserva entradas `jo-bot` y `jobot`. No implica que el servicio remoto este actualizado ni que su host este confirmado.
 - `apps/desktop/packaging`: packaging de escritorio; PyInstaller y herramientas de plataforma se simulan en las regresiones locales.
 - `pyproject.toml`: version, dependencias y entry points; `packages/core/tests`, `apps/desktop/tests`, `apps/jo-bot/tests`: pruebas.
-- Rama local: `codex/gui-setup`; origin verificado: `https://github.com/ldebortoli/instagram-follower-tracker.git`; default branch remota: `main`.
+- Rama local: `main`; origin verificado: `https://github.com/ldebortoli/instagram-follower-tracker.git`; default branch remota: `main`.
 - Fuente WIP y candidato aislado: 0.4.1. La instalacion habitual del producto en `.venv-build` sigue en 0.4.0; no se ha promovido 0.4.1 ni reconstruido EXE.
 - Seguridad adoptada en `.venv-build`: pip 26.2.2/certifi 2026.10.19 y anyio 4.14.2/urllib3 independiente 2.8.0. Python y los otros paquetes se preservaron. urllib3 vendorizado por pip sigue 2.7.0; queda para una futura actualizacion oficial de pip, sin parche manual ni afirmacion de seguridad total.
 
@@ -46,3 +46,11 @@ Aplicacion local multiplataforma para comparar exportaciones JSON oficiales de s
 - Al cerrar, subir al origin verificado los cambios aprobados y comprobar el SHA remoto. La comprobacion puntual de CI de este cierre fue solicitada expresamente; no implica monitoreo posterior recurrente. No crear tags, releases ni deploys.
 
 - Convencion de cierre solicitada por el usuario: comprobar que los cambios aprobados se suban al repositorio correspondiente, verificando destino, audiencia y SHA remoto sin force. Un bloqueo de acceso o publicacion fuera de alcance debe informarse; no cambiar permisos/credenciales para resolverlo. Mantener la politica de CI sin monitoreo salvo pedido expreso.
+
+## Portabilidad CI y rutas de uso (2026-10-23)
+
+- La CI del cierre a85c59d fallo en cuatro casos Ubuntu/macOS: el mock suponia que ctypes.windll existia. Windows aprobo. Se reprodujeron localmente los cuatro fallos eliminando el atributo solo en el proceso de prueba; se corrigieron los dos mocks con raising=False y se dejo esa ausencia como fixture permanente. La ruta DPI de GUI tambien usa plataforma y funcion falsas explicitas. Produccion intacta; 138 passed sin skips y cobertura 1230/1230, mismos 19 archivos sin exclusiones, Ruff aprobado.
+- Evidencia del arreglo: `%LOCALAPPDATA%\Temp\Seguidores-ci-portability-20261023`. Se usa un runtime candidato anterior solo en lectura, con escrituras confinadas a esta carpeta. El resultado CI remoto nuevo se consulta una vez y se registra en su recibo de entrega, sin monitoreo recurrente.
+- Ruta habitual de desarrollo/build: `.venv-build`, Python 3.13.2, producto editable con tres rutas src. Metadata aun 0.4.0, fuente enlazada 0.4.1; conserva launcher seguidores.exe hacia cli.py ya eliminado. Se autoriza adopcion local 0.4.1 manteniendo modo editable y dependencias corregidas; falta preparar/validar candidato y rollback antes de modificarlo.
+- Uso real confirmado por el usuario: seguidores-gui.exe de release o dist. Ambos standalone contienen core 0.4.0, verificado mediante lectura del archivo PyInstaller y constantes de bytecode, sin ejecutarlos. Actualizar Git o .venv-build no actualiza esos EXE; corresponde reconstruir para entregar 0.4.1, con ejecucion manual conforme AGENTS y sin inventar canal/publicacion.
+- Exclusividad actual confirmada directamente: app y bot cerrados y permanecen asi hasta terminar la actualizacion. No consultar procesos por CIM ni alternativas, no cerrarlos desde Codex y no ejecutar migraciones con datos reales.

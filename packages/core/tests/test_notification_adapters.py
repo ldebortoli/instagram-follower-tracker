@@ -15,6 +15,11 @@ from seguidores.models import SocialGraph, compare_graphs
 REAL_POPUP = notifier.send_popup
 
 
+@pytest.fixture(autouse=True)
+def no_native_windows_loader(monkeypatch):
+    monkeypatch.delattr(ctypes, "windll", raising=False)
+
+
 def test_unchanged_capture_can_suppress_all_notifications():
     graph = SocialGraph.from_iterables(["fixture"], [])
     comparison = compare_graphs(
@@ -49,7 +54,7 @@ def test_windows_popup_calls_only_fake_user32(fallback, result, monkeypatch):
     user32 = SimpleNamespace(MessageBoxW=Mock(return_value=result))
     if not fallback:
         user32.MessageBoxTimeoutW = Mock(return_value=result)
-    monkeypatch.setattr(ctypes, "windll", SimpleNamespace(user32=user32))
+    monkeypatch.setattr(ctypes, "windll", SimpleNamespace(user32=user32), raising=False)
     monkeypatch.setattr(sys, "platform", "win32")
     if result:
         REAL_POPUP("fixture", "synthetic")

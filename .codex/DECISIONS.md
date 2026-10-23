@@ -47,3 +47,10 @@ No borrar decisiones anteriores. Si una decision cambia, agregar una nueva entra
 - Validacion posterior: snapshot de 42 archivos identico al commit integrado; 138 pruebas sin skips, cobertura de sentencias 1230/1230 en 19 archivos, 12 regresiones de seguridad/compatibilidad y Ruff aprobados. GUI, migracion y limpieza legacy solo con fixtures/mocks; no datos reales ni app/bot real.
 - Identidad: noreply local autorizado, autor y committer comprobados con la identidad canonica de Git. user.name/global no cambiaron; Git normaliza el nombre al crear identidades, por lo que no se compara su valor crudo directamente con el nombre del commit.
 - Entrega: main del origin publico verificado. No tags ni releases; push de main solo activa tests. SHA remoto y CI puntual se registran en el recibo externo de cierre. No hacer monitoreo recurrente ni cambiar credenciales/permisos. Secret Scanning/Push Protection siguen sin evidencia suficiente y Q-001 permanece parcial.
+
+## D-007 - Mocks Windows portables sin acceso nativo
+
+- Fecha: 2026-10-23. Estado: implementada localmente y validada; CI remota por recibo.
+- Decision: las unidades de notificaciones y acciones GUI eliminan windll mediante fixture reversible y recrean solo dobles con monkeypatch raising=False, tambien en Linux/macOS. Simular sys.platform y DPI explicitamente en la unidad GUI para cubrir el mismo camino en cada host.
+- Motivo: reproduccion segura de los cuatro AttributeError observados en CI a85c59d. No se omiten pruebas, no se baja cobertura y no se cambia produccion para satisfacerlas. Gate local 138 passed, cero skips y 100% de 1230 sentencias.
+- Adopcion de producto: Git ya cerrado no equivale a instalacion habitual/EXE actualizados. Conservar modo editable de .venv-build y los fixes de seguridad; usuario confirmo exclusividad vigente. La reconstruccion de EXE usada realmente queda sujeta al flujo manual de AGENTS y canal verificado, sin publicaciones automaticas.
