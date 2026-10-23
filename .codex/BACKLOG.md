@@ -1,13 +1,15 @@
 # TODO
 
-No hay pedidos locales de integracion pendientes de clasificar.
+No hay pedidos locales de integracion pendientes de clasificar. A-041 requiere resolver su bloqueo antes de otro intento de instalacion.
 
 # IN PROGRESS
 
-- [P1][A-041][2026-10-23] Completar adopcion habitual local 0.4.1 manteniendo la instalacion editable de .venv-build. Usuario confirmo app/bot cerrados durante la actualizacion. Lectura: metadata 0.4.0, fuente editable 0.4.1 y launcher CLI obsoleto. Preparar candidato separado, backup/rollback de producto y launchers; instalar offline solo producto y conservar los 41 paquetes restantes. Sin datos/cuentas/migraciones reales ni inspeccion de procesos.
-- [P1][E-041][2026-10-23] Entregar GUI 0.4.1 al uso real por EXE de release/dist. Artefactos actuales contienen 0.4.0 y siguen intactos. Corresponde nuevo build, pero Codex no ejecuta PyInstaller ni wrapper automaticamente; preparar comando manual de AGENTS despues de validar CI/adopcion. No publicar binarios sin destino verificado/autorizado.
+No hay operaciones de adopcion activas; E-041 termino y A-041 se detuvo con rollback verificado.
+
 
 # BLOCKED
+
+- [P1][A-041][2026-10-23] Adopcion editable habitual pendiente. Candidato 0.4.1 valido: 138 pruebas, 100% (1230/1230), 12 regresiones y pip check; 41 dependencias conservadas. Native pip habitual se detuvo porque el guard local rechazo una operacion sobre el directorio padre site-packages, no un archivo propio. No fue auto-review y no se reintento ni relajo el guard. Se probo ausencia de payload parcial y se restauraron exactamente los 13 archivos propios: 8507 hashes iguales al baseline, metadata 0.4.0/fuente editable 0.4.1/launcher CLI previo. Minima decision pendiente: revision expresa del tratamiento del mkdir no-op sobre directorio existente, con el resto del alcance intacto. EXE habitual ya es 0.4.1 de forma independiente.
 
 - [P1][Q-001][2026-08-20] Proteccion y privacidad GitHub: avance local parcial, protecciones remotas pendientes. Auditoria estatica acotada anterior de 56 archivos y 214 blobs de hasta 2 MB sin patrones detectados; no prueba ausencia de secretos arbitrarios/ofuscados. Cuenta verificada por lectura autorizada: ldebortoli, ID 18238415. El usuario suministro y autorizo expresamente el noreply exacto; user.email local ya se verifico, con user.name/global sin cambios. Restan Secret Scanning/Push Protection: metadata autorizada no expone su estado y este lote no autoriza modificar ajustes. No inventar estado, reescribir historial, cambiar remotos ni marcar Q-001 DONE. USER_QUEUE conserva su nota historica de procesamiento; este backlog describe el estado actual.
 
@@ -22,4 +24,6 @@ No hay pedidos locales de integracion pendientes de clasificar.
 
 - [2026-10-23][I-001] Integracion local completa a main de los 19 commits historicos y WIP GUI-only 0.4.1. Commit funcional 527923f353fdf67655abd2667308804ae5c0016e, fast-forward desde 33ef90a y checkout original en main; seleccion explicita de 31 rutas, tres eliminaciones preservadas y sin add --all. Gate posterior: 138 passed sin skips, 1230/1230 sentencias en 19 archivos, 12 regresiones de seguridad y Ruff aprobados. Identidad noreply solo local, nombre/global preservados. Entrega remota autorizada a main del origin verificado; SHA remoto y CI puntual constan en el recibo externo de cierre. Q-001 conserva su bloqueo remoto; no EXE, promociones ni datos reales.
 
-- [2026-10-23][CI-001] Corregir portabilidad de mocks ctypes.windll en dos archivos de pruebas. Cuatro fallos reproducidos con atributo ausente, luego 138 passed sin skips, cobertura 1230/1230 en 19 archivos y Ruff aprobado; sin cambios de produccion. Commit/push y comprobacion CI puntual se documentan en el recibo externo del lote.
+- [2026-10-23][CI-001] Corregir portabilidad de mocks ctypes.windll en dos archivos de pruebas. Cuatro fallos reproducidos con atributo ausente, luego 138 passed sin skips, cobertura 1230/1230 en 19 archivos y Ruff aprobado; sin cambios de produccion. Fix ea049ebf22dbba294791bb652f8dfc0a11a5c2aa verificado en origin/main; run 39977697405 completed/success en una consulta puntual, sin monitoreo posterior.
+
+- [2026-10-23][E-041] Reconstruir y adoptar GUI standalone 0.4.1 bajo autorizacion expresa posterior, sin wrapper ni publicacion externa. PE AMD64, ZIP/checksum y payload GUI-only verificados; las dos rutas habituales y la nueva carpeta release 0.4.1 pasan version/self-test con HOME sintetico y no crean datos. SHA EXE 510f212c63701843e49d6366686cf6b7d2d838483e30a737d3422749d9daeb65. Dos CLI standalone antiguas trasladadas al rollback, ZIP historico intacto. Baseline/backups/rollback.py y recibos en Seguidores-product041-adoption-20261023. No equivale a completar A-041 ni actualizar servicios remotos.
